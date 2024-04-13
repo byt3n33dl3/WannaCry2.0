@@ -29,6 +29,16 @@ Improvement of--WannaCry Virus project
 * norwegian soccer team ticket sales (Norway)
 * STC telecom (saudia arabia)
 * All ATMs in india closed (India)
+* Hitachi The conglomerate reported problems in email and other systems (Japan)
+* Academic institutions and offices (Taiwan)
+* Speed cameras reportedly, traffic and speed cameras (Australia)
+* Movie theaters systems used for display and ticketing were affected (Korea)
+* Universities in several higher education institutions (Italy)
+* Social Security systems of the social security administration (Brazil)
+* Government and private sectors (Mexico)
+* Widespread Concern (Indonesia)
+* RS Harapan Kita & Dharmais Hospital, no service access to medical records. (Indonesia)
+* Government of Communication and Information Technology (Indonesia)
 
 # Languages C
 
@@ -42,6 +52,7 @@ There are a number of files and folders wannacrypt will avoid. Some because it's
 *   "\Local Settings\Temp"
 *   "\AppData\Local\Temp"
 *   "\Program Files (x86)"
+*   "\Program Files (x64)"
 *   "\Program Files"
 *   "\WINDOWS"
 *   "\ProgramData"
