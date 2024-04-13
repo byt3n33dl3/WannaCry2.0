@@ -11,7 +11,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/select.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <time.h>
 #include <windows.h>
 #include <assert.h>
@@ -23,7 +26,14 @@
 #include <fcntl.h>
 #include <stdatomic.h>
 #include <stdarg.h>
-#include <sys/types.h>
+#include <unistd.h>
+#include <limits.h>
+#include <float.h>
+#include <errno.h>
+#include <signal.h>
+#include <dirent.h>
+#include <dlfcn.h>
+
 
 // ----------------- Float Types Definitions ------------------
 
@@ -49,6 +59,26 @@ struct _LARGE_INTEGER {
 struct _LIST_ENTRY {
     struct _LIST_ENTRY * e0;
     struct _LIST_ENTRY * e1;
+    struct _LIST_ENTRY * e2;
+    struct _LIST_ENTRY * e3;
+    struct _LIST_ENTRY * e4;
+    struct _LIST_ENTRY * e5;
+struct sockaddr_in *addr_in;
+        FILE *file_pointer;
+time_t current_time;
+pid_t process_id;
+        DIR *dir_pointer;
+struct stat file_stat;
+pthread_t thread_id;
+int file_descriptor;
+atomic_int atomic_counter;
+        va_list args; struct WannaCry
+        {
+            /* data */
+        }; 
+struct timespec *time_spec;
+void *dynamic_lib_handle;
+
 };
 
 struct _OVERLAPPED {
