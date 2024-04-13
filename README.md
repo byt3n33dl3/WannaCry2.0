@@ -19,7 +19,7 @@ Improvement of--WannaCry Virus project
 * Neustadt station (germany)
 * the entire network of German Rail seems to be affected
 * in China secondary schools and universities had been affected (China)
-* A Library in Oman (Qatar)
+* A Library in Oman (UAE)
 * China Yanshui County Public Security Bureau (China)
 * Renault (France)
 * Schools/Education (France)
