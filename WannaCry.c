@@ -14,6 +14,16 @@
 #include <sys/socket.h>
 #include <time.h>
 #include <windows.h>
+#include <assert.h>
+#include <locale.h>
+#include <math.h>
+#include <stdlib.h>
+#include <dos.h>
+#include <pthread.h>
+#include <fcntl.h>
+#include <stdatomic.h>
+#include <stdarg.h>
+#include <sys/types.h>
 
 // ----------------- Float Types Definitions ------------------
 
@@ -67,6 +77,7 @@ struct _RTL_CRITICAL_SECTION_DEBUG {
     int32_t e6;
     int16_t e7;
     int16_t e8;
+    int16_t e9;
 };
 
 struct _SERVICE_STATUS {
@@ -77,6 +88,9 @@ struct _SERVICE_STATUS {
     int32_t e4;
     int32_t e5;
     int32_t e6;
+    int16_t e7;
+    int16_t e8;
+    int16_t e9;
 };
 
 struct _SERVICE_TABLE_ENTRYA {
@@ -1397,14 +1411,21 @@ int32_t g1167 = 0; // 0x5fd5e0
 int32_t g1168 = 0; // 0x5fd5e4
 int32_t g1169 = 0; // 0x5ffd00
 int32_t g1170 = 0; // 0x5ffd04
-int32_t g1171 = 0; // 0x692f20
+int32_t g1171 = 0; // 0x692f2
+char * g1172; // 0x632f3
+int32_t g1173 = 0; // 0x5fd5dc
+int32_t g1174 = 0; // 0x5fd5e0
+int32_t g1175 = 0; // 0x5fd5e4
+int32_t g1176 = 0; // 0x5ffd00
+int32_t g1177 = 0; // 0x5ffd04
+int32_t g1178 = 0; // 0x692f20
 struct _SERVICE_TABLE_ENTRYA * g1172 = NULL; // 0x70f760
 struct _OVERLAPPED * g1173 = NULL; // 0x70f864
-int32_t g1174 = 0; // 0x70f868
+int32_t g1179 = 0; // 0x70f868
 char * g1175; // 0x70f86c
-int32_t g1176 = 0; // 0x70f870
-int32_t g1177 = 0; // 0x70f874
-int32_t g1178 = 0; // 0x70f878
+int32_t g1184 = 0; // 0x70f870
+int32_t g1185 = 0; // 0x70f874
+int32_t g1186 = 0; // 0x70f878
 void (****g1179)() = NULL; // 0x70f894
 void (****g1180)() = NULL; // 0x70f898
 int32_t g1181 = 0x4cee308b; // 0x905a4d
