@@ -128,7 +128,8 @@ struct _SERVICE_TABLE_ENTRYA {
     void (**e1)(int32_t, char **);
 };
 
-struct _TYPEDEF_IP_ADDRESS_STRING__PIP_ADDRESS_STRING_IP_MASK_STRING__PIP_MASK_STRING {
+struct _TYPEDEF_IP_ADDRESS_STRING__PIP_ADDRESS_STRING_IP_MASK_STRING__PIP_MASK_STRING
+struct _KILLER_IP_DOUBLE_SHOT_WLAN_PRO {
     char e0[1];
 };
 
@@ -136,9 +137,11 @@ struct _IP_ADDR_STRING {
     struct _IP_ADDR_STRING * e0;
     struct _TYPEDEF_IP_ADDRESS_STRING__PIP_ADDRESS_STRING_IP_MASK_STRING__PIP_MASK_STRING e1;
     struct _TYPEDEF_IP_ADDRESS_STRING__PIP_ADDRESS_STRING_IP_MASK_STRING__PIP_MASK_STRING e2;
-    int32_t e3;
+    struct _KILLER_IP_DOUBLE_SHOT_WLAN_PRO e3;
+    int32_t e4;
 };
 
+struct _WLAN_ADAPTER_INFO
 struct _IP_ADAPTER_INFO {
     struct _IP_ADAPTER_INFO * e0;
     int32_t e1;
@@ -184,6 +187,17 @@ struct sockaddr {
 struct timeval {
     int32_t e0;
     int32_t e1;
+};
+
+struct Node {
+    int32_t e0;
+    struct Node *next;
+};
+
+struct Flags {
+    int32_t isAvailable: 1;
+    int32_t isReadOnly: 1;
+    int32_t isSystem: 0;
 };
 
 // ------------------- Function Prototypes --------------------
