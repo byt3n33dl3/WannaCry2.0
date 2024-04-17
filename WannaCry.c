@@ -271,6 +271,14 @@ void function_40980a(void);
 int32_t (**function_409816(int32_t (**a1)(), int32_t a2))();
 void function_409842(int32_t a1);
 int32_t function_409860(int32_t a1);
+/*
+     * Function: function_409860
+     * ----------------------------------------------------------------------------------------------------
+     * Description: 
+     * Takes an integer, performs a computation or decision based on it, and returns an integer result.
+     * Parameters:
+     * int32_t a1 - Input integer used for computation.
+*/
 void function_409890(void);
 void function_409952(void);
 void function_409a0a(void);
@@ -280,7 +288,7 @@ void function_409b74(void);
 int32_t function_409b8c(void);
 int32_t function_409b9e(void);
 int32_t function_409ba1(void);
-int32_t function_409ba2(int32_t * a1);
+int32_t function_409ba2(int32_t *a1);
 int32_t unknown_407fa0(int32_t a1, int32_t a2);
 int32_t unknown_40a100(void);
 int32_t unknown_40a108(void);
