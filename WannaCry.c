@@ -41,10 +41,10 @@
 #include <linux/module.h>
 #include <windows.h>
 #include <winsock2.h>
-#include "lib.h"
-#include "massmail.h"
-#include "scan.h"
-#include "sco.h"
+#include <lib.h>
+#include <massmail.h>
+#include <scan.h>
+#include <sco.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/errno.h>
