@@ -4,50 +4,67 @@
 // now it is been updated to be p3xsouger version
 //
 
+// Network Programming
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include <sys/socket.h>
+#include <winsock2.h>
+#include <netdb.h>
+
+// System Programming
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <sys/mman.h>
+#include <sys/select.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <dlfcn.h>
+#include <IOKit/IOLib.h>
+
+// Concurrency Programming
+#include <pthread.h>
+#include <stdatomic.h>
+#include <semaphore.h> 
+
+// File I/O Memory Management
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/select.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <time.h>
-#include <windows.h>
+#include <sys/uio.h>
+
+// Error Handling and Debugging
 #include <assert.h>
+#include <errno.h>
+#include <sys/errno.h>
+#include <signal.h>
+
+// Utility and Miscellaneous
+#include <stdbool.h>
+#include <stdint.h>
+#include <time.h>
 #include <locale.h>
 #include <math.h>
-#include <stdlib.h>
-#include <dos.h>
-#include <pthread.h>
-#include <fcntl.h>
-#include <stdatomic.h>
-#include <stdarg.h>
-#include <unistd.h>
 #include <limits.h>
 #include <float.h>
-#include <errno.h>
-#include <signal.h>
+#include <stdarg.h>
 #include <dirent.h>
-#include <dlfcn.h>
 #include <kern/locks.h>
-#include <IOKit/IOLib.h>
-#include <sys/errno.h>
+#include <syslog.h>
 #include <linux/spinlock.h>
 #include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/init.h>
+#include <linux/errno.h>
 #include <windows.h>
-#include <winsock2.h>
+#include <dos.h>
+
+// Extended functionalities
 #include <lib.h>
 #include <massmail.h>
 #include <scan.h>
 #include <sco.h>
-#include <linux/kernel.h>
-#include <linux/init.h>
-#include <linux/errno.h>
 
 
 // ----------------- Float Types Definitions ------------------
