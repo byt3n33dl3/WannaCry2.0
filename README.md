@@ -41,7 +41,14 @@ Improvement of--WannaCry Virus project
 * Government of Communication and Information Technology (indonesia)
 * and more------------------------------⬇️
 
-![wannaCry](https://github.com/Sulaimannabdul/WannaCry3.0/assets/151133481/744047fc-0148-4b9f-88ee-e13d40b5f99e)
+<details>
+<summary><h3> 🌐 Global Infection </h3></summary>
+
+![wannacry1](https://github.com/Sulaimannabdul/WannaCry3.0/assets/151133481/cf3ee53c-57f7-4d94-8650-240726bbeef3)<br>
+![wannacry2](https://github.com/Sulaimannabdul/WannaCry3.0/assets/151133481/014c7c2e-cd6a-41ca-b338-c5f3e9fa7ac4)<br>
+![wannacry3](https://github.com/Sulaimannabdul/WannaCry3.0/assets/151133481/0beb39b9-dba5-4021-a725-2dd6fa232d46)<br>
+
+</details>
 
 ## Language C
 
