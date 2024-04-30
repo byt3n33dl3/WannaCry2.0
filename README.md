@@ -42,7 +42,7 @@ Improvement of--WannaCry Virus project
 * and more------------------------------⬇️
 
 <details>
-<summary><h3> 🌐 Global Infection </h3></summary>
+<summary><h3> 🌐 Global Infection Map </h3></summary>
 
 ![wannacry1](https://github.com/Sulaimannabdul/WannaCry3.0/assets/151133481/cf3ee53c-57f7-4d94-8650-240726bbeef3)<br>
 ![wannacry2](https://github.com/Sulaimannabdul/WannaCry3.0/assets/151133481/014c7c2e-cd6a-41ca-b338-c5f3e9fa7ac4)<br>
