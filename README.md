@@ -1,5 +1,5 @@
 # WannaCry3.0
-Improvement of--WannaCry Virus project
+Improvement of 'WannaCry' Virus project
 
 ## WannaCry Infections
 
