@@ -4,14 +4,11 @@
 // now it is been updated to be p3xsouger version
 //
 
-// Network Programming
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <winsock2.h>
 #include <netdb.h>
-
-// System Programming
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -22,25 +19,17 @@
 #include <sys/wait.h>
 #include <dlfcn.h>
 #include <IOKit/IOLib.h>
-
-// Concurrency Programming
 #include <pthread.h>
 #include <stdatomic.h>
 #include <semaphore.h> 
-
-// File I/O Memory Management
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/uio.h>
-
-// Error Handling and Debugging
 #include <assert.h>
 #include <errno.h>
 #include <sys/errno.h>
 #include <signal.h>
-
-// Utility and Miscellaneous
 #include <stdbool.h>
 #include <stdint.h>
 #include <time.h>
@@ -59,8 +48,6 @@
 #include <linux/errno.h>
 #include <windows.h>
 #include <dos.h>
-
-// Extended functionalities
 #include <lib.h>
 #include <massmail.h>
 #include <scan.h>
