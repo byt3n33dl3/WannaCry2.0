@@ -1,7 +1,7 @@
 # WannaCry3.0
 Improvement of--WannaCry Virus project
 
-## WannaCry Infection
+## WannaCry Infections
 
 * NHS (uk) turning away patients, unable to perform x-rays.
 * Nissan (uk)
