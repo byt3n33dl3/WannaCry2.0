@@ -7,52 +7,32 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <winsock2.h>
-#include <netdb.h>
-#include <unistd.h>
-#include <fcntl.h>
+#include <sys/errno.h>
+#include <kern/locks.h>
 #include <sys/stat.h>
-#include <dirent.h>
 #include <sys/mman.h>
 #include <sys/select.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <dlfcn.h>
-#include <IOKit/IOLib.h>
 #include <pthread.h>
 #include <stdatomic.h>
 #include <semaphore.h> 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/uio.h>
-#include <assert.h>
 #include <errno.h>
-#include <sys/errno.h>
+#include <netdb.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <time.h>
-#include <locale.h>
-#include <math.h>
-#include <limits.h>
 #include <float.h>
 #include <stdarg.h>
 #include <dirent.h>
-#include <kern/locks.h>
 #include <syslog.h>
-#include <linux/spinlock.h>
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/init.h>
-#include <linux/errno.h>
+#include <winsock2.h>
 #include <windows.h>
-#include <dos.h>
-#include <lib.h>
-#include <massmail.h>
-#include <scan.h>
-#include <sco.h>
-
 
 // ----------------- Float Types Definitions ------------------
 
@@ -180,6 +160,228 @@ struct _IP_ADAPTER_INFO {
     struct _IP_ADDR_STRING e15;
     int32_t e16;
     int32_t e17;
+};
+struct WSAData {
+    int16_t e0;
+    int16_t e1;
+    int16_t e2;
+    int16_t e3;
+    char * e4;
+    char e5[1];
+    char e6[1];
+};
+
+struct _FILETIME {
+    int32_t e0;
+    int32_t e1;
+};
+
+struct _IO_FILE {
+    int32_t e0;
+};
+
+struct _LIST_ENTRY {
+    struct _LIST_ENTRY * e0;
+    struct _LIST_ENTRY * e1;
+};
+
+struct _OVERLAPPED {
+    int32_t e0;
+    int32_t e1;
+    int32_t e2;
+    char * e3;
+};
+
+struct _PROCESS_INFORMATION {
+    char * e0;
+    char * e1;
+    int32_t e2;
+    int32_t e3;
+};
+
+struct _RTL_CRITICAL_SECTION {
+    struct _RTL_CRITICAL_SECTION_DEBUG * e0;
+    int32_t e1;
+    int32_t e2;
+    char * e3;
+    char * e4;
+    int32_t e5;
+};
+
+struct _RTL_CRITICAL_SECTION_DEBUG {
+    int16_t e0;
+    int16_t e1;
+    struct _RTL_CRITICAL_SECTION * e2;
+    struct _LIST_ENTRY e3;
+    int32_t e4;
+    int32_t e5;
+    int32_t e6;
+    int16_t e7;
+    int16_t e8;
+};
+
+struct _SECURITY_ATTRIBUTES {
+    int32_t e0;
+    char * e1;
+    bool e2;
+};
+
+struct _SHELLEXECUTEINFOA {
+    int32_t e0;
+    int32_t e1;
+    char * e2;
+    char * e3;
+    char * e4;
+    char * e5;
+    char * e6;
+    int32_t e7;
+    char * e8;
+    char * e9;
+    char * e10;
+    char * e11;
+    int32_t e12;
+    int32_t e13;
+    char * e14;
+};
+
+struct _SID_IDENTIFIER_AUTHORITY {
+    char e0[6];
+};
+
+struct _STARTUPINFOA {
+    int32_t e0;
+    char * e1;
+    char * e2;
+    char * e3;
+    int32_t e4;
+    int32_t e5;
+    int32_t e6;
+    int32_t e7;
+    int32_t e8;
+    int32_t e9;
+    int32_t e10;
+    int32_t e11;
+    int16_t e12;
+    int16_t e13;
+    char * e14;
+    char * e15;
+    char * e16;
+    char * e17;
+};
+
+struct _SYSTEMTIME {
+    int16_t e0;
+    int16_t e1;
+    int16_t e2;
+    int16_t e3;
+    int16_t e4;
+    int16_t e5;
+    int16_t e6;
+    int16_t e7;
+};
+
+struct _TIME_ZONE_INFORMATION {
+    int32_t e0;
+    int16_t e1[32];
+    struct _SYSTEMTIME e2;
+    int32_t e3;
+    int16_t e4[32];
+    struct _SYSTEMTIME e5;
+    int32_t e6;
+};
+
+struct _ULARGE_INTEGER {
+    int64_t e0;
+};
+
+struct _WIN32_FIND_DATAA {
+    int32_t e0;
+    struct _FILETIME e1;
+    struct _FILETIME e2;
+    struct _FILETIME e3;
+    int32_t e4;
+    int32_t e5;
+    int32_t e6;
+    int32_t e7;
+    char e8[1];
+    char e9[14];
+    int32_t e10;
+    int32_t e11;
+    int16_t e12;
+};
+
+struct _WIN32_FIND_DATAW {
+    int32_t e0;
+    struct _FILETIME e1;
+    struct _FILETIME e2;
+    struct _FILETIME e3;
+    int32_t e4;
+    int32_t e5;
+    int32_t e6;
+    int32_t e7;
+    int16_t e8[1];
+    int16_t e9[14];
+    int32_t e10;
+    int32_t e11;
+    int16_t e12;
+};
+
+struct fd_set {
+    int32_t e0;
+    int32_t e1[1];
+};
+
+struct hostent {
+    char * e0;
+    char ** e1;
+    int16_t e2;
+    int16_t e3;
+    char ** e4;
+};
+
+struct in_addr {
+    int32_t e0;
+};
+
+struct sockaddr {
+    int16_t e0;
+    char e1[14];
+};
+
+struct tagLOGFONTA {
+    int32_t e0;
+    int32_t e1;
+    int32_t e2;
+    int32_t e3;
+    int32_t e4;
+    char e5;
+    char e6;
+    char e7;
+    char e8;
+    char e9;
+    char e10;
+    char e11;
+    char e12;
+    char e13[32];
+};
+
+struct tagRECT {
+    int32_t e0;
+    int32_t e1;
+    int32_t e2;
+    int32_t e3;
+};
+
+struct tagTRACKMOUSEEVENT {
+    int32_t e0;
+    int32_t e1;
+    char * e2;
+    int32_t e3;
+};
+
+struct timeval {
+    int32_t e0;
+    int32_t e1;
 };
 
 struct _IP_PER_ADAPTER_INFO_W2KSP1 {
@@ -1506,6 +1708,181 @@ int32_t * g23 = &g1181; // 0x40f080
 int32_t * g84 = &g24; // 0x42e6dc
 char (*g94)[819] = &g35; // 0x42e730
 int32_t * g104 = &g1171; // 0x431340
+int32_t function_404eb0(int32_t a1) {
+    int32_t v1; // 0x40d471
+    int32_t v2; // 0x40e6cc
+    int32_t v3; // 0x40f414
+    int32_t v4; // 0x410860
+    int32_t v5; // 0x412765
+    int32_t v6; // 0x412776
+    int32_t v7; // 0x413050
+    int32_t v8; // 0x413260
+    int32_t v9; // 0x41356e
+    int32_t v10; // 0x4156c8
+    int32_t v11; // 0x4158d8
+    int32_t v12; // 0x415a30
+    int32_t v13; // 0x415bec
+    int32_t v14; // 0x415c00
+    int32_t v15; // 0x415c18
+    int32_t v16; // 0x415e30
+    int32_t v17; // 0x415e78
+    int32_t v18; // 0x415fa0
+    int32_t v19; // 0x4160c8
+    int32_t v20; // 0x416100
+    int32_t v21; // 0x416278
+    int32_t v22; // 0x416600
+    int32_t v23; // 0x416794
+    int32_t v24; // 0x4191b0
+    int32_t v25; // 0x4195b0
+    int32_t v26; // 0x4199b0
+    int32_t v27; // 0x419db0
+    char * v28; // 0x41a1b0
+    int32_t v29; // 0x41a1d8
+    int32_t v30; // 0x41a1dc
+    int32_t v31; // 0x41a1e0
+    int32_t v32; // 0x41a1e4
+    int32_t v33; // 0x41a1e8
+    int32_t v34; // 0x41a1ec
+    int32_t v35; // 0x41a230
+    int32_t v36; // 0x41a2a8
+    int32_t v37; // 0x41b2a8
+    int32_t v38; // 0x41ba40
+    int32_t v39; // 0x41ba98
+    int32_t v40; // 0x41bc80
+    int32_t v41; // 0x41c9c0
+    int32_t v42; // 0x41ca00
+    int32_t v43; // 0x41caa0
+    int32_t v44; // 0x41caf8
+    int32_t v45; // 0x41cb70
+    int32_t v46; // 0x4202d8
+    int32_t v47; // 0x420760
+    int32_t v48; // 0x420794
+    char * v49; // 0x4213a8
+    int32_t * v50; // 0x4213ac
+    char * v51; // 0x4213b4
+    char v52[2]; // 0x4214dc
+    char * v53; // 0x42172c
+    char * v54; // 0x421798
+    int16_t v55; // 0x42179c
+    int32_t (*v56)(int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t); // 0x4217a0
+    int32_t (*v57)(int32_t, int32_t, int32_t, int32_t, int32_t); // 0x4217a4
+    int32_t (*v58)(int32_t, int32_t, int32_t, int32_t, int32_t); // 0x4217a8
+    int32_t (*v59)(int32_t, int32_t); // 0x4217ac
+    int32_t v60; // 0x4217b0
+    int32_t (*v61)(int32_t); // 0x4217b4
+    int32_t (*v62)(int32_t); // 0x4217b8
+    int32_t v63; // 0x4217bc
+    int32_t (*v64)(int32_t, int32_t, int32_t, int32_t, int32_t); // 0x4217c0
+    int32_t (*v65)(int32_t, int32_t, int32_t, int32_t, int32_t, int32_t); // 0x4217c4
+    int32_t (*v66)(int32_t); // 0x4217c8
+    int32_t (*v67)(int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t); // 0x4217cc
+    int32_t (*v68)(int32_t, int32_t, int32_t, int32_t, int32_t, int32_t); // 0x4217d0
+    int32_t v69; // 0x4217d4
+    int32_t v70; // 0x4217d8
+    int32_t v71; // 0x42189c
+    int32_t v72; // 0x4220dc
+    char * v73; // 0x4220e4
+    char * v74; // 0x422148
+    char * v75; // 0x4221ac
+    int32_t v76; // 0x422210
+    int32_t v77; // 0x422290
+    char v78; // 0x422291
+    void (****v79)(); // 0x422298
+    void (****v80)(); // 0x42229c
+    // 0x404eb0
+    abort();
+    // UNREACHABLE
+}
+
+// Address range: 0x404f70 - 0x404fdf
+int32_t function_404f70(int32_t * a1, int32_t result, int32_t a3, int32_t a4) {
+    int32_t v1; // 0x40d471
+    int32_t v2; // 0x40e6cc
+    int32_t v3; // 0x40f414
+    int32_t v4; // 0x410860
+    int32_t v5; // 0x412765
+    int32_t v6; // 0x412776
+    int32_t v7; // 0x413050
+    int32_t v8; // 0x413260
+    int32_t v9; // 0x41356e
+    int32_t v10; // 0x4156c8
+    int32_t v11; // 0x4158d8
+    int32_t v12; // 0x415a30
+    int32_t v13; // 0x415bec
+    int32_t v14; // 0x415c00
+    int32_t v15; // 0x415c18
+    int32_t v16; // 0x415e30
+    int32_t v17; // 0x415e78
+    int32_t v18; // 0x415fa0
+    int32_t v19; // 0x4160c8
+    int32_t v20; // 0x416100
+    int32_t v21; // 0x416278
+    int32_t v22; // 0x416600
+    int32_t v23; // 0x416794
+    int32_t v24; // 0x4191b0
+    int32_t v25; // 0x4195b0
+    int32_t v26; // 0x4199b0
+    int32_t v27; // 0x419db0
+    char * v28; // 0x41a1b0
+    int32_t v29; // 0x41a1d8
+    int32_t v30; // 0x41a1dc
+    int32_t v31; // 0x41a1e0
+    int32_t v32; // 0x41a1e4
+    int32_t v33; // 0x41a1e8
+    int32_t v34; // 0x41a1ec
+    int32_t v35; // 0x41a230
+    int32_t v36; // 0x41a2a8
+    int32_t v37; // 0x41b2a8
+    int32_t v38; // 0x41ba40
+    int32_t v39; // 0x41ba98
+    int32_t v40; // 0x41bc80
+    int32_t v41; // 0x41c9c0
+    int32_t v42; // 0x41ca00
+    int32_t v43; // 0x41caa0
+    int32_t v44; // 0x41caf8
+    int32_t v45; // 0x41cb70
+    int32_t v46; // 0x4202d8
+    int32_t v47; // 0x420760
+    int32_t v48; // 0x420794
+    char * v49; // 0x4213a8
+    int32_t * v50; // 0x4213ac
+    char * v51; // 0x4213b4
+    char v52[2]; // 0x4214dc
+    char * v53; // 0x42172c
+    char * v54; // 0x421798
+    int16_t v55; // 0x42179c
+    int32_t (*v56)(int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t); // 0x4217a0
+    int32_t (*v57)(int32_t, int32_t, int32_t, int32_t, int32_t); // 0x4217a4
+    int32_t (*v58)(int32_t, int32_t, int32_t, int32_t, int32_t); // 0x4217a8
+    int32_t (*v59)(int32_t, int32_t); // 0x4217ac
+    int32_t v60; // 0x4217b0
+    int32_t (*v61)(int32_t); // 0x4217b4
+    int32_t (*v62)(int32_t); // 0x4217b8
+    int32_t v63; // 0x4217bc
+    int32_t (*v64)(int32_t, int32_t, int32_t, int32_t, int32_t); // 0x4217c0
+    int32_t (*v65)(int32_t, int32_t, int32_t, int32_t, int32_t, int32_t); // 0x4217c4
+    int32_t (*v66)(int32_t); // 0x4217c8
+    int32_t (*v67)(int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t); // 0x4217cc
+    int32_t (*v68)(int32_t, int32_t, int32_t, int32_t, int32_t, int32_t); // 0x4217d0
+    int32_t v69; // 0x4217d4
+    int32_t v70; // 0x4217d8
+    int32_t v71; // 0x42189c
+    int32_t v72; // 0x4220dc
+    char * v73; // 0x4220e4
+    char * v74; // 0x422148
+    char * v75; // 0x4221ac
+    int32_t v76; // 0x422210
+    int32_t v77; // 0x422290
+    char v78; // 0x422291
+    void (****v79)(); // 0x422298
+    void (****v80)(); // 0x42229c
+    _qm_OnCtlColor_CDialog__IAEPAUHBRUSH____PAVCDC__PAVCWnd__I_Z((int32_t)a1);
+    uint32_t v81 = a3 - 1; // 0x404f8e
+    if (v81 == 0) {
+        // 0x404fc7
+        _qm_GetDlgCtrlID_CWnd__QBEHXZ();
+        return result;
+    }
 
 // ------------------------ Functions -------------------------
 
@@ -12738,6 +13115,239 @@ static void select_subject(struct msgstate_t *state)
 	else if (i >= 85)
 		CharUpper(state->subject);
 }
+int32_t function_40cd80(int32_t a1, int32_t a2) {
+    int32_t v1; // 0x40d471
+    int32_t v2; // 0x40e6cc
+    int32_t v3; // 0x40f414
+    int32_t v4; // 0x410860
+    int32_t v5; // 0x412765
+    int32_t v6; // 0x412776
+    int32_t v7; // 0x413050
+    int32_t v8; // 0x413260
+    int32_t v9; // 0x41356e
+    int32_t v10; // 0x4156c8
+    int32_t v11; // 0x4158d8
+    int32_t v12; // 0x415a30
+    int32_t v13; // 0x415bec
+    int32_t v14; // 0x415c00
+    int32_t v15; // 0x415c18
+    int32_t v16; // 0x415e30
+    int32_t v17; // 0x415e78
+    int32_t v18; // 0x415fa0
+    int32_t v19; // 0x4160c8
+    int32_t v20; // 0x416100
+    int32_t v21; // 0x416278
+    int32_t v22; // 0x416600
+    int32_t v23; // 0x416794
+    int32_t v24; // 0x4191b0
+    int32_t v25; // 0x4195b0
+    int32_t v26; // 0x4199b0
+    int32_t v27; // 0x419db0
+    char * v28; // 0x41a1b0
+    int32_t v29; // 0x41a1d8
+    int32_t v30; // 0x41a1dc
+    int32_t v31; // 0x41a1e0
+    int32_t v32; // 0x41a1e4
+    int32_t v33; // 0x41a1e8
+    int32_t v34; // 0x41a1ec
+    int32_t v35; // 0x41a230
+    int32_t v36; // 0x41a2a8
+    int32_t v37; // 0x41b2a8
+    int32_t v38; // 0x41ba40
+    int32_t v39; // 0x41ba98
+    int32_t v40; // 0x41bc80
+    int32_t v41; // 0x41c9c0
+    int32_t v42; // 0x41ca00
+    int32_t v43; // 0x41caa0
+    int32_t v44; // 0x41caf8
+    int32_t v45; // 0x41cb70
+    int32_t v46; // 0x4202d8
+    int32_t v47; // 0x420760
+    int32_t v48; // 0x420794
+    char * v49; // 0x4213a8
+    int32_t * v50; // 0x4213ac
+    char * v51; // 0x4213b4
+    char v52[2]; // 0x4214dc
+    char * v53; // 0x42172c
+    char * v54; // 0x421798
+    int16_t v55; // 0x42179c
+    int32_t (*v56)(int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t); // 0x4217a0
+    int32_t (*v57)(int32_t, int32_t, int32_t, int32_t, int32_t); // 0x4217a4
+    int32_t (*v58)(int32_t, int32_t, int32_t, int32_t, int32_t); // 0x4217a8
+    int32_t (*v59)(int32_t, int32_t); // 0x4217ac
+    int32_t v60; // 0x4217b0
+    int32_t (*v61)(int32_t); // 0x4217b4
+    int32_t (*v62)(int32_t); // 0x4217b8
+    int32_t v63; // 0x4217bc
+    int32_t (*v64)(int32_t, int32_t, int32_t, int32_t, int32_t); // 0x4217c0
+    int32_t (*v65)(int32_t, int32_t, int32_t, int32_t, int32_t, int32_t); // 0x4217c4
+    int32_t (*v66)(int32_t); // 0x4217c8
+    int32_t (*v67)(int32_t, int32_t, int32_t, int32_t, int32_t, int32_t, int32_t); // 0x4217cc
+    int32_t (*v68)(int32_t, int32_t, int32_t, int32_t, int32_t, int32_t); // 0x4217d0
+    int32_t v69; // 0x4217d4
+    int32_t v70; // 0x4217d8
+    int32_t v71; // 0x42189c
+    int32_t v72; // 0x4220dc
+    char * v73; // 0x4220e4
+    char * v74; // 0x422148
+    char * v75; // 0x4221ac
+    int32_t v76; // 0x422210
+    int32_t v77; // 0x422290
+    char v78; // 0x422291
+    void (****v79)(); // 0x422298
+    void (****v80)(); // 0x42229c
+    int32_t result;
+    int32_t v81; // 0x40cd88
+    if (v81 == 0) {
+        // 0x40ce44
+        return result;
+    }
+    char * v82 = (char *)(v81 - 1); // 0x40cd93_0
+    unsigned char v83 = *v82; // 0x40cd93
+    int32_t result2 = result & -256 | (int32_t)v83; // 0x40cd93
+    if (result2 == 0 || result2 == -1) {
+        // 0x40ce44
+        return result2;
+    }
+    char * str = (char *)v81;
+    *v82 = v83 - 1;
+    int32_t len = strlen(str);
+    int32_t v84; // 0x40cdf8
+    if (len < 0xfffffffe) {
+        // 0x40cda6
+        v84 = 0;
+        // branch -> 0x40cdd0
+    } else {
+        // 0x40cdc9
+        _qm__Xlen_std__YAXXZ();
+        v84 = 0;
+        // branch -> 0x40cdd0
+    }
+    // 0x40cdd0
+    int32_t v85;
+    int32_t v86;
+    char * v87;
+    int32_t v88; // 0x40cdf8
+    int32_t v89; // 0x40ce2a
+    int32_t v90; // 0x40cdd0
+    uint32_t v91; // 0x40ce0a
+    int32_t v92; // 0x40ce27
+    if (v90 == v84) {
+        // 0x40cdf8
+        v88 = len;
+        if (v88 == v84) {
+            // 0x40cdfc
+            return function_40c7b0(1, v85, v86);
+        }
+        // 0x40ce0a
+        if (v91 > 31) {
+            // 0x40ce16
+            function_40c7b0(1, v85, v86);
+            // branch -> 0x40ce1f
+            // 0x40ce1f
+            function_40c9c0(len, v85);
+            v89 = len;
+            // branch -> 0x40ce27
+            // 0x40ce27
+            v87 = (char *)v92;
+            result = v89;
+            memcpy(v87, str, v89 / 4);
+            memcpy(v87, str, result & 3);
+            // branch -> 0x40ce44
+            // 0x40ce44
+            return result;
+        }
+        // 0x40ce12
+        if (v91 >= v88) {
+            v89 = v88;
+            // 0x40ce27
+            v87 = (char *)v92;
+            result = v89;
+            memcpy(v87, str, v89 / 4);
+            memcpy(v87, str, result & 3);
+            // branch -> 0x40ce44
+            // 0x40ce44
+            return result;
+        }
+        // 0x40ce16
+        function_40c7b0(1, v85, v86);
+        // branch -> 0x40ce1f
+        // 0x40ce1f
+        function_40c9c0(len, v85);
+        v89 = len;
+        // branch -> 0x40ce27
+        // 0x40ce27
+        v87 = (char *)v92;
+        result = v89;
+        memcpy(v87, str, v89 / 4);
+        memcpy(v87, str, result & 3);
+        // branch -> 0x40ce44
+        // 0x40ce44
+        return result;
+    }
+    char * v93 = (char *)(v90 - 1); // 0x40cdd7_0
+    int32_t v94 = (int32_t)*v93; // 0x40cdd7
+    if (v94 == 0) {
+        // 0x40cdf8
+        v88 = len;
+        if (v88 == v84) {
+            // 0x40cdfc
+            return function_40c7b0(1, v85, v86);
+        }
+        // 0x40ce0a
+        if (v91 <= 31) {
+            // 0x40ce12
+            if (v91 >= v88) {
+                v89 = v88;
+                // 0x40ce27
+                v87 = (char *)v92;
+                result = v89;
+                memcpy(v87, str, v89 / 4);
+                memcpy(v87, str, result & 3);
+                // branch -> 0x40ce44
+                // 0x40ce44
+                return result;
+            }
+        }
+        // 0x40ce16
+        function_40c7b0(1, v85, v86);
+        // branch -> 0x40ce1f
+        // 0x40ce1f
+        function_40c9c0(len, v85);
+        v89 = len;
+        // branch -> 0x40ce27
+        // 0x40ce27
+        v87 = (char *)v92;
+        result = v89;
+        memcpy(v87, str, v89 / 4);
+        memcpy(v87, str, result & 3);
+        // branch -> 0x40ce44
+        // 0x40ce44
+        return result;
+    }
+    // 0x40cdde
+    if (v94 != -1) {
+        // 0x40cde2
+        if (len == v84) {
+            // 0x40cde6
+            *v93 = (char)(v94 + 255);
+            return function_40c7b0(v84, v85, v86);
+        }
+        // 0x40cde2
+        // branch -> 0x40ce1f
+        // 0x40ce1f
+        function_40c9c0(len, v85);
+        v89 = len;
+        // branch -> 0x40ce27
+        // 0x40ce27
+        v87 = (char *)v92;
+        result = v89;
+        memcpy(v87, str, v89 / 4);
+        memcpy(v87, str, result & 3);
+        // branch -> 0x40ce44
+        // 0x40ce44
+        return result;
+    }
 
 static int select_attach_file(struct msgstate_t *state)
 {
